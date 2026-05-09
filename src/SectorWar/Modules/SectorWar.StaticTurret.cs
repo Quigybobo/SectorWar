@@ -1101,8 +1101,12 @@ public sealed partial class SectorWar : IStaticTurret
         // Cloak ship sprite when LVZ cannon overlay is configured. Otherwise
         // honour the legacy Ufo flag (treated as a "fully invisible" hint by
         // the original conf design).
+        // Cloak hides the ship sprite (LVZ cannon graphic shows in its place).
+        // UFO frees the bot from wall physics. Stealth INTENTIONALLY OMITTED
+        // so the energy bar + name still display above the cannon overlay —
+        // players need to see HP draining to know they're hurting the turret.
         if (bot.TurretType.OverlayImageIndex >= 0 || bot.TurretType.Ufo)
-            pkt.Status = PlayerPositionStatus.Cloak | PlayerPositionStatus.Stealth | PlayerPositionStatus.Ufo;
+            pkt.Status = PlayerPositionStatus.Cloak | PlayerPositionStatus.Ufo;
 
         _game.FakePosition(bot.Player, ref pkt);
     }
@@ -1479,8 +1483,11 @@ public sealed partial class SectorWar : IStaticTurret
         pkt.Bounty = (ushort)tt.Bounty;
         pkt.Energy = (short)Math.Min(bot.Energy, short.MaxValue);
         pkt.Time = ServerTick.Now;
+        // Cloak + UFO only — Stealth omitted so HP/name show above the cannon
+        // overlay (players see turret HP drain). See SendInitialPosition_StaticTurret
+        // for the same omission rationale.
         if (tt.Ufo || tt.OverlayImageIndex >= 0)
-            pkt.Status = PlayerPositionStatus.Cloak | PlayerPositionStatus.Stealth | PlayerPositionStatus.Ufo;
+            pkt.Status = PlayerPositionStatus.Cloak | PlayerPositionStatus.Ufo;
 
         if (fireWeapon)
         {

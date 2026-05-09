@@ -2,6 +2,7 @@ using SS.SectorWar.Interfaces;
 using SS.Core;
 using SS.Core.ComponentCallbacks;
 using SS.Core.ComponentInterfaces;
+using SS.Packets.Game;
 
 namespace SS.SectorWar.Modules;
 
@@ -84,6 +85,20 @@ public sealed partial class SectorWar
     /// <summary>Mainloop tick cadence for the HQ patrol/respawn driver.
     /// Patrol cadence is much slower than this (seconds), so 1 Hz is plenty.</summary>
     private const int HqTickIntervalMs = 1000;
+
+    // ── HQ baseplate LVZ ────────────────────────────────────────────────────
+    // Subsystem allocates one slot per HQ at AttachHq, returns it at DetachHq.
+    // Image is 512×512 — half-size = 256 is subtracted from HQ center to
+    // compute LVZ top-left (LVZ map objects anchor top-left, see
+    // SectorWar.StationDeployer.cs's baseplate code).
+    //
+    // Pool moved from 9316..9331 to 9332..9347 because slot 9316 is owned by
+    // ArenaDefenses for the AI fortress baseplate (see
+    // SectorWar.ArenaDefenses.cs:89). Duplicate object IDs in the LVZ caused
+    // both baseplates to render at HQ coords.
+    private const short HqBaseplatePoolStart = 9332;
+    private const short HqBaseplatePoolEnd = 9347;
+    private const int HqBaseplateHalfSize = 256;
 
     /// <summary>Turret-type keys registered in structures.conf as
     /// [staticturret_hq_perimeter_gun] / [staticturret_hq_command] /
@@ -205,6 +220,12 @@ public sealed partial class SectorWar
         public int EngageHoldPixels;
         public int RespawnDelaySeconds;
         public List<HqCapitalRuntime> Capitals = new();
+        /// <summary>LVZ baseplate slot IDs allocated for each spawned HQ.
+        /// Index parallels the freq order from _hqDefinitions. Cleared on
+        /// detach (slots toggled off + returned to a free pool).</summary>
+        public List<short> BaseplateIds = new();
+        public Stack<short> BaseplateFreePool = new();
+        public bool BaseplatePoolInitialized;
     }
 
     internal sealed partial class ArenaData
@@ -349,6 +370,14 @@ public sealed partial class SectorWar
             var cfg = arena.Cfg!;
             int totalSpawned = 0;
 
+            // Initialize the baseplate slot pool once per state.
+            if (!state.BaseplatePoolInitialized)
+            {
+                for (short id = HqBaseplatePoolEnd; id >= HqBaseplatePoolStart; id--)
+                    state.BaseplateFreePool.Push(id);
+                state.BaseplatePoolInitialized = true;
+            }
+
             foreach (HqDefinition def in _hqDefinitions)
             {
                 // [Spawn] Team{N}-X / Team{N}-Y are tile coords (0..1023). The
@@ -360,6 +389,8 @@ public sealed partial class SectorWar
                 int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}Y", 512);
                 int centerPx = (teamTileX << 4) + 8;
                 int centerPy = (teamTileY << 4) + 8;
+
+                ShowHqBaseplate(arena, state, centerPx, centerPy);
 
                 int spawned = SpawnHqDefenders(arena, staticTurret, def, centerPx, centerPy);
                 totalSpawned += spawned;
@@ -477,11 +508,55 @@ public sealed partial class SectorWar
                 try { staticTurret.RemoveBotAt(arena, cx, cy, cap.Freq, HqCapitalKey); }
                 catch { /* best-effort */ }
             }
+
+            // Toggle off + recycle baseplate LVZ slots.
+            foreach (short bid in ad.HqArenaState.BaseplateIds)
+            {
+                try { _lvzObjects.Toggle(arena, bid, false); }
+                catch { /* best-effort */ }
+            }
         }
         finally
         {
             _hqBroker.ReleaseInterface(ref staticTurret);
             ad.HqArenaState = null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // BASEPLATE
+    // -------------------------------------------------------------------------
+
+    /// <summary>Allocate one LVZ baseplate slot, position it under the HQ
+    /// center, toggle on. Slot ID is appended to state.BaseplateIds so
+    /// despawn can clean up. Silent no-op if the pool is exhausted.</summary>
+    private void ShowHqBaseplate(Arena arena, HqArenaState state, int centerPx, int centerPy)
+    {
+        if (state.BaseplateFreePool.Count == 0)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                "HQ baseplate pool exhausted; new HQ will render without a floor.");
+            return;
+        }
+
+        short slotId = state.BaseplateFreePool.Pop();
+        // LVZ map objects anchor top-left — subtract half-size to center the
+        // 512×512 baseplate on HQ center.
+        short anchorX = (short)(centerPx - HqBaseplateHalfSize);
+        short anchorY = (short)(centerPy - HqBaseplateHalfSize);
+        try
+        {
+            _lvzObjects.SetPosition(arena, slotId, anchorX, anchorY,
+                ScreenOffset.Normal, ScreenOffset.Normal);
+            _lvzObjects.Toggle(arena, slotId, true);
+            state.BaseplateIds.Add(slotId);
+        }
+        catch (Exception ex)
+        {
+            // Return the slot if SetPosition/Toggle threw — don't leak the pool.
+            state.BaseplateFreePool.Push(slotId);
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"HQ baseplate display failed: {ex.Message}");
         }
     }
 

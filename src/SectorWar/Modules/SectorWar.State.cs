@@ -68,6 +68,15 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar : ISectorWar
 {
+    // Conf surface read by the SectorWarState subsystem — GLOBAL scope, not
+    // per-arena. See docs/ARENA_SETTINGS.md (out-of-scope section).
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("SectorWar", "BossesEnabled", ConfigScope.Global,
+        Default = 0, Min = 0, Max = 1,
+        Description = "Bool-as-int. Master gate for boss encounters across the zone.")]
+    [ConfigHelp("SectorWar", "LinkedArenas", ConfigScope.Global,
+        Default = "",
+        Description = "Comma-separated arena names tracked by SectorWarState. Empty falls back to the built-in list.")]
     private const string SectorWarStateStatusCommand = "sectorstatus";
 
     /// <summary>

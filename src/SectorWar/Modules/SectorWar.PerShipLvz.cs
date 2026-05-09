@@ -71,6 +71,18 @@ public sealed partial class SectorWar
     /// (Warbird=0..Shark=7, Spec=8). Used to read per-ship config sections by
     /// name.
     /// </summary>
+    // Conf surface read by the PerShipLvz subsystem — see docs/ARENA_SETTINGS.md.
+    // One ShowLvz key per ship section (8 ships + Spectator).
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("Warbird",   "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Javelin",   "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Spider",    "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Leviathan", "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Terrier",   "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Weasel",    "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Lancaster", "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Shark",     "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering this ship. -1 = none.")]
+    [ConfigHelp<int>("Spectator", "ShowLvz", ConfigScope.Arena, Default = -1, Min = -1, Max = 32767, Description = "LVZ object id to toggle on when entering spectator. -1 = none.")]
     private static readonly string[] PerShipLvzShipNames =
     {
         "Warbird", "Javelin", "Spider", "Leviathan",

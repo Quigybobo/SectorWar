@@ -142,6 +142,24 @@ public sealed partial class SectorWar : IStaticTurret
     // CONSTANTS — copied verbatim from staticturret.c top of file.
     // -------------------------------------------------------------------------
 
+    // Conf surface owned by the StaticTurret subsystem — see docs/ARENA_SETTINGS.md.
+    // Indexed keys [SectorWar] StaticTurretTurret{N} / StaticTurretSpawn{N} and
+    // per-turret-type [staticturret_<key>] sections (Energy, Recharge, WeaponType,
+    // …) are documented in ARENA_SETTINGS.md only — ConfigHelp does not support
+    // indexed or dynamic-section declarations.
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("SectorWar", "StaticTurretHosted", ConfigScope.Arena,
+        Default = 0, Min = 0, Max = 1,
+        Description = "Bool-as-int. 1 = bots are player-hosted; 0 = NPC-managed.")]
+    [ConfigHelp<int>("SectorWar", "StaticTurretMaxBots", ConfigScope.Arena,
+        Default = -1, Min = -1, Max = 999,
+        Description = "Max concurrent turret bots. -1 = unlimited.")]
+    [ConfigHelp<int>("SectorWar", "StaticTurretShipFavour", ConfigScope.Arena,
+        Default = 0, Min = 0, Max = 8,
+        Description = "Preferred ship index for spawn. 0 = no preference; 1..8 = Warbird..Shark.")]
+    [ConfigHelp<int>("SectorWar", "StaticTurretTurretPlacementRange", ConfigScope.Arena,
+        Default = 0, Min = 0, Max = 16384,
+        Description = "Max tile distance from host where turrets may be placed.")]
     /// <summary>Number of low-numbered freqs that have a power resource (3 = freqs 0, 1, 2).</summary>
     private const int StaticTurretStructuresFreqs = 3;
 

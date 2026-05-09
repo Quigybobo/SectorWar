@@ -70,6 +70,17 @@ public sealed partial class SectorWar
 {
     /// <summary>Maximum brick entries read from conf (per arena). Matches
     /// the original module's hard cap.</summary>
+    // Conf surface read by the AutoBrick subsystem — see docs/ARENA_SETTINGS.md.
+    // Indexed keys [SectorWar] AutoBrickBrick{N} / AutoBrickTeam{N} (N = 0..31)
+    // are documented in ARENA_SETTINGS.md only — ConfigHelp does not support
+    // indexed-key declarations.
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("Brick", "BrickTime", ConfigScope.Arena,
+        Default = 12000, Min = 100, Max = 999_999,
+        Description = "Milliseconds a brick wall persists. Drives AutoBrick refresh schedule.")]
+    [ConfigHelp<int>("Team", "SpectatorFrequency", ConfigScope.Arena,
+        Default = 8025, Min = 0, Max = 9999,
+        Description = "Default freq used as the AutoBrickTeam{N} fallback when a brick slot is missing its tint.")]
     private const int AutoBrickMaxBricks = 32;
 
     // -------------------------------------------------------------------------

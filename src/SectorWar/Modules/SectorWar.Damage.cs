@@ -66,6 +66,76 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar : IDamage
 {
+    // Conf surface read by the Damage subsystem — see docs/ARENA_SETTINGS.md.
+    // SS.NET-conventional sections: [Bullet], [Bomb], [Damage], plus per-ship
+    // [Warbird]..[Shark]. ConfigHelp duplicates the framework's own
+    // declarations for these keys (AllowMultiple = true) so SectorWar's
+    // bounds appear in admin tooling alongside the framework's.
+    // Pinned to a field; the framework's Help scanner only walks members.
+
+    // [Damage] — SectorWar-only conf surface (no framework analogue).
+    [ConfigHelp<int>("Damage", "IgnoreTeamDamage", ConfigScope.Arena,
+        Default = 0, Min = 0, Max = 1,
+        Description = "Bool-as-int. 1 = team-damaged players don't damage SectorWar fakes.")]
+
+    // [Bullet] / [Bomb] — projectile defaults.
+    [ConfigHelp<int>("Bullet", "BulletDamageLevel", ConfigScope.Arena,
+        Default = 200, Min = 0, Max = 32767,
+        Description = "Base damage on bullet hit (signed-short clamp).")]
+    [ConfigHelp<int>("Bullet", "BulletDamageUpgrade", ConfigScope.Arena,
+        Default = 100, Min = 0, Max = 32767,
+        Description = "Damage multiplier per weapon upgrade level.")]
+    [ConfigHelp<int>("Bullet", "BulletAliveTime", ConfigScope.Arena,
+        Default = 550, Min = 0, Max = 99999,
+        Description = "Bullet projectile lifetime in milliseconds. (phong reference cap.)")]
+    [ConfigHelp<int>("Bomb", "BombDamageLevel", ConfigScope.Arena,
+        Default = 750, Min = 0, Max = 32767,
+        Description = "Base damage on bomb hit.")]
+    [ConfigHelp<int>("Bomb", "BombAliveTime", ConfigScope.Arena,
+        Default = 800, Min = 0, Max = 99999,
+        Description = "Bomb projectile lifetime in milliseconds.")]
+
+    // [<ShipName>] — per-ship reads. Five keys × eight ship sections.
+    [ConfigHelp<int>("Warbird",   "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Javelin",   "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Spider",    "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Leviathan", "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Terrier",   "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Weasel",    "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Lancaster", "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Shark",     "BulletSpeed", ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bullet projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Warbird",   "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Javelin",   "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Spider",    "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Leviathan", "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Terrier",   "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Weasel",    "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Lancaster", "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Shark",     "BombSpeed",   ConfigScope.Arena, Default = 2000, Min = 0, Max = 10000, Description = "Bomb projectile speed in pixels/sec.")]
+    [ConfigHelp<int>("Warbird",   "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Javelin",   "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Spider",    "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Leviathan", "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Terrier",   "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Weasel",    "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Lancaster", "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Shark",     "Radius", ConfigScope.Arena, Default = 14, Min = 1, Max = 256, Description = "Ship collision radius in pixels.")]
+    [ConfigHelp<int>("Warbird",   "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Javelin",   "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Spider",    "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Leviathan", "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Terrier",   "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Weasel",    "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Lancaster", "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Shark",     "InitialEnergy", ConfigScope.Arena, Default = 1000, Min = 0, Max = 32767, Description = "Spawn energy.")]
+    [ConfigHelp<int>("Warbird",   "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Javelin",   "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Spider",    "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Leviathan", "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Terrier",   "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Weasel",    "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Lancaster", "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
+    [ConfigHelp<int>("Shark",     "MaximumRecharge", ConfigScope.Arena, Default = 1150, Min = 0, Max = 32767, Description = "Max recharge rate per tick.")]
     private const int DamageTickIntervalMs = 10;
     private const int DamageBulletRadius = 3;
     private const int DamageBombRadius = 7;

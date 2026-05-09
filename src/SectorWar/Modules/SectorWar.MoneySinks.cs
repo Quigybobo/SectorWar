@@ -76,6 +76,17 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar : IMoneySinks
 {
+    // Conf surface owned by the MoneySinks subsystem — see docs/ARENA_SETTINGS.md.
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("SectorWar", "MoneySinksWealthTaxIntervalSeconds", ConfigScope.Arena,
+        Default = 3600, Min = 60, Max = 604800,
+        Description = "Seconds between wealth-tax sweeps (60s..1 week).")]
+    [ConfigHelp<int>("SectorWar", "MoneySinksWealthTaxPercent", ConfigScope.Arena,
+        Default = 1, Min = 0, Max = 100,
+        Description = "Percent of EXCESS-over-threshold taxed per sweep.")]
+    [ConfigHelp<int>("SectorWar", "MoneySinksWealthTaxThresholdCredits", ConfigScope.Arena,
+        Default = 1_000_000, Min = 0, Max = 2_000_000_000,
+        Description = "Credit balance over this is taxed on the excess.")]
     private const string MoneySinksDiceCommand = "dice";
     private const string MoneySinksJackpotCommand = "jackpot";
 

@@ -61,6 +61,19 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar
 {
+    // Conf surface read by the Ctf subsystem — see docs/ARENA_SETTINGS.md.
+    // Indexed [CTF] Team{N}-X / -Y / -Region / -Name keys are documented in
+    // ARENA_SETTINGS.md only — ConfigHelp does not support indexed-key declarations.
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("CTF", "Teams", ConfigScope.Arena,
+        Default = 2, Min = 1, Max = 9,
+        Description = "Number of CTF teams (and flags). Already clamped 1..9 in code.")]
+    [ConfigHelp<int>("CTF", "WinCaptures", ConfigScope.Arena,
+        Default = 3, Min = 1, Max = 999,
+        Description = "Captures needed to win. Already clamped to a minimum of 1 in code.")]
+    [ConfigHelp<int>("CTF", "NeutAfterKill", ConfigScope.Arena,
+        Default = 0, Min = 0, Max = 1,
+        Description = "Bool-as-int. 1 = flags become neutral when their carrier is killed.")]
     private const int CtfMaxTeams = 9;
     private const int CtfTickIntervalMs = 1000;
 

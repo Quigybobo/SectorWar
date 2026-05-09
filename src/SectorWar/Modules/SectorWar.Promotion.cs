@@ -78,6 +78,14 @@ public sealed partial class SectorWar
 {
     /// <summary>Hard cap on prize-list length. Matches the original module.
     /// Prevents a runaway conf entry from allocating gigabytes.</summary>
+    // Conf surface owned by the Promotion subsystem — see docs/ARENA_SETTINGS.md.
+    // Pinned to a field; the framework's Help scanner only walks members.
+    [ConfigHelp<int>("SectorWar", "PromotionKillsForPromotion", ConfigScope.Arena,
+        Default = 5, Min = 1, Max = 999,
+        Description = "Streak length needed to earn the kill-streak crown.")]
+    [ConfigHelp("SectorWar", "PromotionPrizes", ConfigScope.Arena,
+        Default = "",
+        Description = "Space-separated Prize enum ints awarded on each promotion. Empty = no prizes.")]
     private const int PromotionMaxPrizes = 128;
 
     // -------------------------------------------------------------------------

@@ -68,6 +68,27 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar : IEconomy, IRpg
 {
+    // Conf surface owned by the Rpg subsystem — see docs/ARENA_SETTINGS.md.
+    // Pinned to a field: the framework's Help scanner only walks
+    // fields/properties/events, not class declarations.
+    [ConfigHelp<int>("SectorWar", "XpPerKill", ConfigScope.Arena,
+        Default = 100, Min = 0, Max = 1000000,
+        Description = "XP awarded to the killer on each player kill.")]
+    [ConfigHelp<int>("SectorWar", "XpPerGreen", ConfigScope.Arena,
+        Default = 5, Min = 0, Max = 100000,
+        Description = "XP awarded for each green prize picked up.")]
+    [ConfigHelp<int>("SectorWar", "BaseXpForLevel", ConfigScope.Arena,
+        Default = 250, Min = 1, Max = 1000000,
+        Description = "XP-curve coefficient. XP needed to reach level N is BaseXpForLevel * (N-1)^2.")]
+    [ConfigHelp<int>("SectorWar", "CreditsPerKill", ConfigScope.Arena,
+        Default = 50, Min = 0, Max = 1000000,
+        Description = "Credits awarded per kill.")]
+    [ConfigHelp<int>("SectorWar", "CreditsPerGreen", ConfigScope.Arena,
+        Default = 2, Min = 0, Max = 100000,
+        Description = "Credits awarded per green.")]
+    [ConfigHelp<int>("SectorWar", "TransferFeePercent", ConfigScope.Arena,
+        Default = 5, Min = 0, Max = 100,
+        Description = "Percent fee on ?pay transfers; vanishes (sink).")]
     private const string RpgConfSection = "SectorWar";
 
     private const string RpgSectorWarCommand = "sectorwar";

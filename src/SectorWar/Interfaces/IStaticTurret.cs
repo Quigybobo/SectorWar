@@ -72,6 +72,19 @@ public interface IStaticTurret : IComponentInterface
     int RemoveAllBots(Arena arena);
 
     /// <summary>
+    /// Move an existing bot to a new pixel position WITHOUT churning the
+    /// underlying fake-player record. Internal PixelX/PixelY are updated and
+    /// a fresh position packet is broadcast. Used by Hq's patrolling capital
+    /// (and any other "warp this turret" scenario) to keep the fake's F2
+    /// identity stable across teleports — RemoveBotAt + AddBot would destroy
+    /// and recreate the fake, causing F2 flicker.
+    ///
+    /// Returns true if a matching bot was found and moved.
+    /// </summary>
+    bool MoveBot(Arena arena, int oldPixelX, int oldPixelY, short freq,
+        string? turretKey, int newPixelX, int newPixelY);
+
+    /// <summary>
     /// Fired on the mainloop thread when a registered turret bot's energy hits
     /// zero from real-player bullet damage (server-side detection via IDamage).
     /// Args: (arena, turretKey, pixelX, pixelY, freq, killer). Subscribers

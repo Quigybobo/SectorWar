@@ -92,6 +92,22 @@ These keys live under `[SectorWar]` with the `MoneySinks` prefix. A separate
 | `AutoBrickBrick{N}` | string `x1,y1,x2,y2` | _(empty)_ | tile 0 | tile 1023 (per coord) | **yes** | Brick line endpoints in tile coords. Empty / null = slot disabled. | [SectorWar.AutoBrick.cs:149](../src/SectorWar/Modules/SectorWar.AutoBrick.cs#L149) |
 | `AutoBrickTeam{N}` | int (freq) | `[Team] SpectatorFrequency` (8025) | 0 | 9999 | no | Brick freq tint for slot N. | [SectorWar.AutoBrick.cs:159](../src/SectorWar/Modules/SectorWar.AutoBrick.cs#L159) |
 
+### Hq (auto-spawned per-team headquarters)
+
+Each playable freq gets an HQ at its `[Spawn] Team{N}-X / Team{N}-Y` coord with
+a perimeter of static-turret defenders + a patrolling stationary capital ship
+that warps among four corners until an enemy enters engage-hold range.
+Defender turret stats live in `[staticturret_hq_perimeter_gun]`,
+`[staticturret_hq_command]`, `[staticturret_hq_capital]` (registered as
+`StaticTurretTurret5/6/7`).
+
+| Key | Type | Default | Min | Max | Nullable | Description | Source |
+|---|---|---|---|---|---|---|---|
+| `HqEnabled` | bool | 1 | 0 | 1 | no | Auto-spawn the HQ formation on arena `Create`. 0 disables HQs entirely. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
+| `HqCapitalPatrolPeriodMs` | int (ms) | 10000 | 1000 | 99999 | no | Base interval between capital teleports. Jittered ±20% per warp. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
+| `HqCapitalEngageHoldPixels` | int (px) | 1024 | 64 | 16383 | no | Any enemy player within this radius pauses the capital's patrol so StaticTurret AI can engage. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
+| `HqCapitalRespawnDelaySeconds` | int (sec) | 60 | 1 | 9999 | no | Seconds after a capital is killed before module-driven respawn at HQ corner 0. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
+
 ### StaticTurret (umbrella keys)
 
 | Key | Type | Default | Min | Max | Nullable | Description | Source |

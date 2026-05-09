@@ -658,6 +658,38 @@ public sealed partial class SectorWar : IStaticTurret
         return removed;
     }
 
+    /// <summary>Move an existing bot to a new pixel position. Updates internal
+    /// PixelX/PixelY and broadcasts a fresh position packet so clients see the
+    /// teleport without losing the fake-player F2 entry. Returns true if a
+    /// matching bot was found and moved.</summary>
+    bool IStaticTurret.MoveBot(Arena arena, int oldPixelX, int oldPixelY, short freq,
+        string? turretKey, int newPixelX, int newPixelY)
+    {
+        StaticTurretBotData? toMove = null;
+        lock (_staticTurretGlobalLock)
+        {
+            foreach (var bot in _staticTurretBots)
+            {
+                if (bot.Arena != arena) continue;
+                if (bot.Freq != freq) continue;
+                if (bot.PixelX != oldPixelX || bot.PixelY != oldPixelY) continue;
+                if (turretKey is not null
+                    && !string.Equals(bot.TurretType.Key, turretKey, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                toMove = bot;
+                break;
+            }
+            if (toMove is null) return false;
+
+            toMove.PixelX = newPixelX;
+            toMove.PixelY = newPixelY;
+        }
+        // Position broadcast outside the lock — FakePosition can call into
+        // network code; nesting global-lock under that risks deadlock.
+        SendPositionUpdate_StaticTurret(toMove, fireWeapon: false);
+        return true;
+    }
+
     /// <summary>Remove a single bot matching position + freq (and optional turret-type key).</summary>
     bool IStaticTurret.RemoveBotAt(Arena arena, int pixelX, int pixelY, short freq, string? turretKey)
     {

@@ -360,6 +360,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         LoadArenaDefenses(broker);
         LoadBossEncounter(broker);
         LoadCompositeHitbox(broker);
+        LoadHq(broker);                  // needs IStaticTurret (loaded above)
 
         // Async / persist subsystems. Market publishes IMarketReader and
         // also consumes IEconomy (Rpg above). StationDeployer needs
@@ -391,6 +392,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         await UnloadRpgAsync(broker, cancellationToken);
         await UnloadMarketAsync(broker, cancellationToken);
 
+        UnloadHq(broker);                // mirror reverse-load
         UnloadCompositeHitbox(broker);
         UnloadBossEncounter(broker);
         UnloadArenaDefenses(broker);
@@ -488,6 +490,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         AttachRpg(arena);
         AttachPylon(arena);
         AttachStationDeployer(arena);
+        AttachHq(arena);
         AttachInventory(arena);
 
         _logManager.LogA(LogLevel.Info, LogCategory, arena,
@@ -519,6 +522,12 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         {
             _logManager.LogA(LogLevel.Warn, LogCategory, arena,
                 $"Inventory detach failed: {ex.Message}");
+        }
+        try { DetachHq(arena); }
+        catch (Exception ex)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"Hq detach failed: {ex.Message}");
         }
         try { DetachStationDeployer(arena); }
         catch (Exception ex)

@@ -15,3 +15,34 @@ obj/
 # OS
 Thumbs.db
 .DS_Store
+
+# ---------------------------------------------------------------------------
+# Local-only working tree
+# ---------------------------------------------------------------------------
+# This repo ships ONE thing: the SS.SectorWar.dll plugin for Nexus. Everything
+# below is dev/reference context — sibling source trees, the bot fleet, ASSS
+# port references, and design notes — kept locally for testing and lookup but
+# not part of what the world clones.
+
+# Sibling source / reference clones (each is its own git repo)
+/SubspaceServer/
+/eg-asss/
+/zero/
+
+# Loose reference + tooling (would otherwise expand the working tree by ~200 files)
+/reference-modules/
+/tools/
+
+# Local design + research notes. The two README-linked plugin docs
+# (ARCHITECTURE.md, SECTORWAR_CONF.md) stay tracked.
+/docs/BOMB_VFX_RESEARCH.md
+/docs/HIDDEN_TROOPS_RESEARCH.md
+/docs/MODULAR_CAPITAL_SHIP.md
+/docs/MODULES.md
+/docs/PERSHIPLVZ.md
+/docs/PORTED_MODULES.md
+/docs/SECTOR_WAR_PLAN.md
+/docs/SHIP_ROSTER.md
+/docs/STRUCTURES_PLAN.md
+/docs/SUBSPACE_DAMAGE_MODEL.md
+/docs/VISUAL_THEME.md

@@ -38,12 +38,13 @@ which arena it attaches to and SectorWar runs there.
 
 The csproj uses `ProjectReference` against gigamon's SubspaceServer source.
 Point it at your local clone via the `SubspaceServerSrc` MSBuild property
-(or the `SUBSPACESERVER_SRC` environment variable). The default points at
-a sibling `my-zone\SubspaceServer\src` clone — adjust if your layout
-differs.
+(or the `SUBSPACESERVER_SRC` environment variable). The default assumes
+`SectorWar/` and `SubspaceServer/` are siblings under the same parent
+directory — adjust if your layout differs.
 
 ```pwsh
-# Default — looks for a sibling my-zone\SubspaceServer\src clone
+# Default — looks for a sibling SubspaceServer\src clone
+# (../SubspaceServer/src relative to this repo's root)
 dotnet build src/SectorWar/SectorWar.csproj -c Release
 
 # Or point at a specific SubspaceServer clone:

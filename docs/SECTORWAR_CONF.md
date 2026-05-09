@@ -1,4 +1,4 @@
-﻿# SectorWar conf reference
+# SectorWar conf reference
 
 The plugin reads ONE arena.conf section: `[SectorWar]`. Almost every gameplay
 knob (XP curve, transfer fees, wealth tax, claim percentages, boss HP, …)
@@ -27,6 +27,11 @@ that read no conf at all are omitted from this list.
 | `TransferFeePercent` | `5` | Fee taken on `?pay` transfers. Fee vanishes (sink). |
 
 ### MoneySinks
+
+Note: these keys live under `[SectorWar]` with the `MoneySinks` prefix. A
+separate `[SectorWar.MoneySinks]` section is **silently ignored** by the
+consolidated subsystem — the keys must be in `[SectorWar]` or they fall back
+to the defaults below. See [Migration](#migration-from-a-legacy-aphelionrpg-or-sectorwarmoneysinks-zone).
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -76,7 +81,7 @@ prefix as they're extracted to conf. Until then, change them in-source.
 
 ---
 
-## Migration from a legacy `[Aphelion.RPG]` zone
+## Migration from a legacy `[Aphelion.RPG]` or `[SectorWar.MoneySinks]` zone
 
 Zones that ran the previous standalone-modules build had two sections:
 `[Aphelion.RPG]` (RPG core) and `[Aphelion.RPG.MoneySinks]` (wealth tax).
@@ -93,29 +98,19 @@ Migration:
   TransferFeePercent = 5
 
 - [Aphelion.RPG.MoneySinks]
-+ [SectorWar.MoneySinks]
-  WealthTaxIntervalSeconds = 3600
-  WealthTaxPercent = 1
-  WealthTaxThresholdCredits = 1000000
+- WealthTaxIntervalSeconds = 3600
+- WealthTaxPercent = 1
+- WealthTaxThresholdCredits = 1000000
++ [SectorWar]
++ MoneySinksWealthTaxIntervalSeconds = 3600
++ MoneySinksWealthTaxPercent = 1
++ MoneySinksWealthTaxThresholdCredits = 1000000
 ```
 
-Note: the MoneySinks consolidated subsystem expects the prefixed keys
-(`MoneySinksWealthTaxIntervalSeconds`, etc.) under `[SectorWar]`, not under
-`[SectorWar.MoneySinks]`. The conf above with `[SectorWar.MoneySinks]` is a
-holdover from the legacy standalone — feel free to merge into a single
-`[SectorWar]` section with the prefix:
-
-```ini
-[SectorWar]
-XpPerKill = 100
-; … other RPG core keys …
-MoneySinksWealthTaxIntervalSeconds = 3600
-MoneySinksWealthTaxPercent = 1
-MoneySinksWealthTaxThresholdCredits = 1000000
-```
-
-Both shapes work — the subsystem reads its keys from `[SectorWar]`. Keeping
-`[SectorWar.MoneySinks]` as a separate section is purely organisational.
+The MoneySinks consolidated subsystem reads `MoneySinks*`-prefixed keys from
+`[SectorWar]`. It does **not** read a separate `[SectorWar.MoneySinks]`
+section — keys placed there are silently ignored and the subsystem falls back
+to defaults.
 
 ---
 

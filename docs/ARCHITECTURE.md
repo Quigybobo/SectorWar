@@ -1,4 +1,4 @@
-﻿# SectorWar architecture
+# SectorWar architecture
 
 One-page overview of the consolidated plugin's internal layout.
 
@@ -7,20 +7,22 @@ One-page overview of the consolidated plugin's internal layout.
 ## The umbrella class
 
 ```csharp
-public sealed partial class SectorWar :
-    IAsyncModule,
-    IArenaAttachableModule,
-    // …14 broker interfaces published by partial-class subsystems
-    IWarpInEffect, IShipSettings, ISectorClaim, IDeployableShop,
-    IMoneySinks, ISectorWar, IPowerGrid, IMarketReader,
-    ICompositeHitbox, IDamage, IEconomy, IRpg,
-    IGunTurret, IPylon, IStaticTurret, IInventory
+public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
 { … }
 ```
 
-The class is split across ~30 files via C# `partial class` files. SS.NET sees
-ONE module, the file system sees ~30 partial files (one per subsystem cluster
-plus a small umbrella scaffold).
+The class itself implements only the two SS.NET lifecycle interfaces. The 17
+broker interfaces it exposes (`IPylon`, `IDamage`, `IRpg`, `IMarketReader`,
+`IInventory`, `IShipSettings`, `IGunTurret`, `IStaticTurret`,
+`IStationDeployer`, `IDeployableShop`, `IPowerGrid`, `ISectorClaim`,
+`ISectorWar`, `IMoneySinks`, `IEconomy`, `ICompositeHitbox`,
+`IWarpInEffect`) are **registered with the SS.NET broker at Load time**, not
+listed in the type declaration. Each subsystem partial wires its own
+`broker.RegisterInterface(…)` so cross-subsystem consumers resolve them via
+`broker.GetInterface<I…>()` exactly as if they were separate modules.
+
+The class is split across 29 files via C# `partial class` files: one umbrella
+scaffold plus one file per subsystem cluster. SS.NET sees ONE module.
 
 ```
 src/SectorWar/Modules/

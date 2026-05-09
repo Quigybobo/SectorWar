@@ -9,9 +9,10 @@
     drops into a running zone's bin/modules/SectorWar/ folder.
 
     Configurable paths:
-      $(SubspaceServerSrc)  Path to SubspaceServer/src. Default points at a
-                            sibling 'my-zone' clone:
-                              ..\..\..\my-zone\SubspaceServer\src
+      $(SubspaceServerSrc)  Path to SubspaceServer/src. Default assumes
+                            SectorWar/ and SubspaceServer/ are siblings under
+                            the same parent directory:
+                              ..\..\..\SubspaceServer\src
                             Override with:
                               dotnet build -p:SubspaceServerSrc=...
                             or via env var $env:SUBSPACESERVER_SRC.
@@ -35,11 +36,12 @@
     <VersionPrefix>0.1.0</VersionPrefix>
     <EnableDynamicLoading>true</EnableDynamicLoading>
 
-    <!-- Default to a sibling my-zone clone three levels up from this csproj
-         (csproj is at SectorWar/src/SectorWar/SectorWar.csproj, so
-         ..\..\..\my-zone\SubspaceServer\src lands beside SectorWar/). -->
+    <!-- Default assumes SubspaceServer is a sibling of the SectorWar repo.
+         csproj lives at SectorWar/src/SectorWar/SectorWar.csproj, so
+         ..\..\..\ resolves to the parent of SectorWar/, and
+         ..\..\..\SubspaceServer\src lands inside the sibling clone. -->
     <SubspaceServerSrc Condition=" '$(SubspaceServerSrc)' == '' AND '$(SUBSPACESERVER_SRC)' != '' ">$(SUBSPACESERVER_SRC)</SubspaceServerSrc>
-    <SubspaceServerSrc Condition=" '$(SubspaceServerSrc)' == '' ">$(MSBuildThisFileDirectory)..\..\..\my-zone\SubspaceServer\src</SubspaceServerSrc>
+    <SubspaceServerSrc Condition=" '$(SubspaceServerSrc)' == '' ">$(MSBuildThisFileDirectory)..\..\..\SubspaceServer\src</SubspaceServerSrc>
 
     <!-- Local-by-default OutDir. Pointing this at a running zone's modules
          folder works but locks the DLL while the zone is up; use $(DeployTo)

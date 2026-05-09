@@ -88,6 +88,10 @@ public sealed partial class SectorWar : IDeployableShop
     private const string DeployableShopBuyOutpostCommand = "buyoutpost";
     private const string DeployableShopBuyWarStationCommand = "buywarstation";
     private const string DeployableShopShopCommand = "deployshop";
+    /// <summary>Unified subcommand dispatcher: "?buy pylon" / "?buy outpost" /
+    /// "?buy warstation" / "?buy" (lists shop). Registered arena-scoped so
+    /// it doesn't collide with SS.Core.Modules.Buy in arenas that attach it.</summary>
+    private const string DeployableShopBuyCommand = "buy";
 
     /// <summary>Single source of truth for what's in the shop. UI consumers
     /// (Inventory ?menu, ?deployshop) read from here so prices + descriptions
@@ -139,11 +143,23 @@ public sealed partial class SectorWar : IDeployableShop
     }
 
     // -------------------------------------------------------------------------
-    // PER-ARENA ATTACH / DETACH (no-ops — zone-wide)
+    // PER-ARENA ATTACH / DETACH
+    //
+    // The legacy buy* commands are zone-wide (registered in Load). The unified
+    // "?buy <kind>" dispatcher is arena-scoped because SS.Core.Modules.Buy
+    // also registers "?buy" arena-scoped — coexistence requires our handler
+    // to only bind in arenas SectorWar attaches to.
     // -------------------------------------------------------------------------
 
-    private void AttachDeployableShop(Arena arena) { /* zone-wide */ }
-    private void DetachDeployableShop(Arena arena) { /* zone-wide */ }
+    private void AttachDeployableShop(Arena arena)
+    {
+        _commandManager.AddCommand(DeployableShopBuyCommand, Command_DeployableShopBuy, arena);
+    }
+
+    private void DetachDeployableShop(Arena arena)
+    {
+        _commandManager.RemoveCommand(DeployableShopBuyCommand, Command_DeployableShopBuy, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IDeployableShop IMPLEMENTATION
@@ -331,7 +347,7 @@ public sealed partial class SectorWar : IDeployableShop
             foreach (var o in _deployableShopOfferings)
             {
                 _chat.SendMessage(player,
-                    $"  ?buy{o.Kind}  {o.Cost:N0} cr - {o.Description}");
+                    $"  ?buy {o.Kind}  {o.Cost:N0} cr - {o.Description}");
             }
             _chat.SendMessage(player, $"Your balance: {balance:N0} cr.");
         }
@@ -339,5 +355,31 @@ public sealed partial class SectorWar : IDeployableShop
         {
             if (econ is not null) _deployableShopBroker.ReleaseInterface(ref econ);
         }
+    }
+
+    [CommandHelp(Targets = CommandTarget.None, Args = "[pylon|outpost|warstation]",
+        Description = "Deploy from the shop. ?buy with no arg lists the catalog.")]
+    private void Command_DeployableShopBuy(ReadOnlySpan<char> commandName,
+        ReadOnlySpan<char> parameters, Player player, ITarget target)
+    {
+        ReadOnlySpan<char> trimmed = parameters.Trim();
+
+        // Bare "?buy" → shop listing. Reuses the same path as ?deployshop so
+        // the formatting can't drift between the two help surfaces.
+        if (trimmed.IsEmpty)
+        {
+            Command_DeployableShopShop(commandName, parameters, player, target);
+            return;
+        }
+
+        // Take the first whitespace-delimited token as the deployable kind.
+        // Anything after it is currently ignored (no per-kind options yet).
+        int spaceIdx = trimmed.IndexOfAny(' ', '\t');
+        ReadOnlySpan<char> kindSpan = spaceIdx < 0 ? trimmed : trimmed[..spaceIdx];
+        string kind = kindSpan.ToString();
+
+        IDeployableShop self = this;
+        self.TryBuy(player, kind, out string msg);
+        _chat.SendMessage(player, msg);
     }
 }

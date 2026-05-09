@@ -318,6 +318,14 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         // standalone SectorClaim provides the interface; once the umbrella's
         // SectorClaim runs LoadSectorClaim first, the registration happens
         // in-class, before LoadSectorClaimVisual asks for it.
+        //
+        // Rpg loads FIRST. It publishes IEconomy + IRpg, which MoneySinks,
+        // Market, and Inventory all consume at their own Load time. Loading
+        // Rpg later silently disables those subsystems (they log a warn and
+        // bail). Rpg itself only needs IPersist, a core interface that's
+        // always available.
+        await LoadRpgAsync(broker, cancellationToken);
+
         // Foundation utilities (no inter-subsystem deps).
         LoadFreqChangeWarp(broker);
         LoadWarpInEffect(broker);
@@ -327,7 +335,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         LoadPromotion(broker);
         LoadShipSettings(broker);
         LoadHullVisuals(broker);
-        LoadMoneySinks(broker);
+        LoadMoneySinks(broker);          // consumes IEconomy from Rpg above
         LoadSectorWarState(broker);
         LoadDevCommands(broker);
         LoadModularShip(broker);
@@ -353,11 +361,10 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         LoadBossEncounter(broker);
         LoadCompositeHitbox(broker);
 
-        // Async / persist subsystems. Market + Rpg publish IMarketReader/
-        // IEconomy/IRpg; StationDeployer needs IPylon + IStaticTurret (both
-        // already loaded above).
+        // Async / persist subsystems. Market publishes IMarketReader and
+        // also consumes IEconomy (Rpg above). StationDeployer needs
+        // IPylon + IStaticTurret (both already loaded above).
         await LoadMarketAsync(broker, cancellationToken);
-        await LoadRpgAsync(broker, cancellationToken);
         await LoadStationDeployerAsync(broker, cancellationToken);
 
         // Inventory loads LAST — its menus consume nearly everything: IEconomy

@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    SectorWar — Cres-style standalone plugin for SubspaceServer.NET.
+
+    This csproj builds against gigamon's SubspaceServer source via
+    ProjectReference (with Private=False + ExcludeAssets=all so the host's
+    DLLs are NOT redistributed alongside the plugin output). The plugin DLL
+    drops into a running zone's bin/modules/SectorWar/ folder.
+
+    Configurable paths:
+      $(SubspaceServerSrc)  Path to SubspaceServer/src. Default points at a
+                            sibling 'my-zone' clone:
+                              ..\..\..\my-zone\SubspaceServer\src
+                            Override with:
+                              dotnet build -p:SubspaceServerSrc=...
+                            or via env var $env:SUBSPACESERVER_SRC.
+
+      $(DeployTo)           Optional. If set, after a successful build the
+                            plugin DLL + .deps.json + .pdb +
+                            .runtimeconfig.json are copied into this folder
+                            (typically a running zone's
+                              bin/modules/SectorWar/
+                            directory). Leave unset for a clean local build
+                            into bin/Release/SectorWar/ — pointing OutDir at
+                            a running zone locks the DLL while the zone is up.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SS.$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>SS.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+
+    <!-- Default to a sibling my-zone clone three levels up from this csproj
+         (csproj is at SectorWar/src/SectorWar/SectorWar.csproj, so
+         ..\..\..\my-zone\SubspaceServer\src lands beside SectorWar/). -->
+    <SubspaceServerSrc Condition=" '$(SubspaceServerSrc)' == '' AND '$(SUBSPACESERVER_SRC)' != '' ">$(SUBSPACESERVER_SRC)</SubspaceServerSrc>
+    <SubspaceServerSrc Condition=" '$(SubspaceServerSrc)' == '' ">$(MSBuildThisFileDirectory)..\..\..\my-zone\SubspaceServer\src</SubspaceServerSrc>
+
+    <!-- Local-by-default OutDir. Pointing this at a running zone's modules
+         folder works but locks the DLL while the zone is up; use $(DeployTo)
+         instead for that workflow. -->
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\$(Configuration)\$(MSBuildProjectName)</OutDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.5">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SubspaceServerSrc)\Core\Core.csproj">
+      <Private>False</Private>
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="$(SubspaceServerSrc)\Packets\Packets.csproj">
+      <Private>False</Private>
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="$(SubspaceServerSrc)\SourceGeneration\SourceGeneration.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="$(SubspaceServerSrc)\Utilities\Utilities.csproj">
+      <Private>False</Private>
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!-- Optional direct-deploy: copy plugin artefacts into a running zone's
+       bin/modules/SectorWar/ folder when $(DeployTo) is set. Runs after a
+       successful build. -->
+  <Target Name="DeployPluginToZone" AfterTargets="Build" Condition=" '$(DeployTo)' != '' ">
+    <MakeDir Directories="$(DeployTo)" />
+    <ItemGroup>
+      <_PluginArtefacts Include="$(OutDir)\$(AssemblyName).dll" />
+      <_PluginArtefacts Include="$(OutDir)\$(AssemblyName).pdb" Condition="Exists('$(OutDir)\$(AssemblyName).pdb')" />
+      <_PluginArtefacts Include="$(OutDir)\$(AssemblyName).deps.json" Condition="Exists('$(OutDir)\$(AssemblyName).deps.json')" />
+      <_PluginArtefacts Include="$(OutDir)\$(AssemblyName).runtimeconfig.json" Condition="Exists('$(OutDir)\$(AssemblyName).runtimeconfig.json')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PluginArtefacts)" DestinationFolder="$(DeployTo)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="SectorWar deployed to $(DeployTo)" />
+  </Target>
+
+</Project>

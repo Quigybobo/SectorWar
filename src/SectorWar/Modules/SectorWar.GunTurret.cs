@@ -266,11 +266,6 @@ public sealed partial class SectorWar : IGunTurret
             var t = new GunTurretEntry(info);
             pd.Turrets.Add(t);
 
-            // Phase B diagnostic — confirm the AutoFire flag survived the
-            // Inventory → IGunTurret plumbing.
-            _logManager.LogP(LogLevel.Info, LogCategory, player,
-                $"GunTurret added: {info.Name} weapon={info.Weapon} lvl={info.WeaponLevel} autoFire={info.AutoFire}");
-
             if (player.Ship != ShipType.Spec) ActivateGunTurret(player, t);
         }
         return true;
@@ -542,10 +537,8 @@ public sealed partial class SectorWar : IGunTurret
         short bounty, short flagCount, short points, Prize green)
     {
         if (!killed.TryGetExtraData(_gunTurretPdKey, out GunTurretPlayerData? pd)) return;
-        int n;
         lock (_gunTurretGlobalLock)
         {
-            n = pd.Turrets.Count;
             foreach (var t in pd.Turrets)
             {
                 t.Coast = true;
@@ -553,9 +546,6 @@ public sealed partial class SectorWar : IGunTurret
                 if (t.Fake is not null) _game.Attach(t.Fake, null);  // detach during coast
             }
         }
-        if (n > 0)
-            _logManager.LogP(LogLevel.Info, LogCategory, killed,
-                $"OnKill: {n} turret(s) coasting (will re-attach in {GunTurretCoastTimeMs}ms)");
     }
 
     private void OnNewPlayer_GunTurret(Player newPlayer, bool isNew)
@@ -610,12 +600,7 @@ public sealed partial class SectorWar : IGunTurret
                             if (now - t.StartCoastTickMs > GunTurretCoastTimeMs)
                             {
                                 t.Coast = false;
-                                if (t.Fake is not null)
-                                {
-                                    _game.Attach(t.Fake, p);
-                                    _logManager.LogP(LogLevel.Info, LogCategory, p,
-                                        $"Coast resolved: {t.Info.Name} re-attached");
-                                }
+                                if (t.Fake is not null) _game.Attach(t.Fake, p);
                             }
                         }
                         if (!t.Coast && t.Fake is not null
@@ -671,14 +656,6 @@ public sealed partial class SectorWar : IGunTurret
         // Gate 2: per-turret cadence.
         if (nowMs - t.LastAutoFireTickMs < _gunTurretAutoFireDelayMs) return;
         if (anchor.Arena is null) return;
-
-        // Phase B diagnostic: log entry to the gate path roughly every 2s
-        // per turret so we can confirm the tick is reaching here.
-        if (nowMs - t.LastAutoFireTickMs > 2000)
-        {
-            _logManager.LogA(LogLevel.Drivel, LogCategory, anchor.Arena,
-                $"AutoFire gate-1+2 passed for {t.Info.Name} (anchor={anchor.Name})");
-        }
 
         // Compute turret world position from anchor + rotated offset.
         var anchorPos = anchor.Position;

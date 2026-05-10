@@ -356,6 +356,7 @@ public sealed partial class SectorWar : IStaticTurret
 
     /// <summary>BotKilled event consumers register on the resolved IStaticTurret interface.</summary>
     public event Action<Arena, string, int, int, short, Player?>? BotKilled;
+    public event Action<Arena, string, int, int, short, Player?>? BotDamaged;
 
     // -------------------------------------------------------------------------
     // SUBSYSTEM LOAD / UNLOAD HOOKS
@@ -688,6 +689,29 @@ public sealed partial class SectorWar : IStaticTurret
         // network code; nesting global-lock under that risks deadlock.
         SendPositionUpdate_StaticTurret(toMove, fireWeapon: false);
         return true;
+    }
+
+    /// <summary>Count live bots in <paramref name="arena"/> matching <paramref name="freq"/>
+    /// (and optional <paramref name="turretKey"/>). Used by RoundManager to gate
+    /// sudden-death on "all defenders cleared" before promoting a capital kill
+    /// to a round-end.</summary>
+    int IStaticTurret.CountBots(Arena arena, short freq, string? turretKey)
+    {
+        int count = 0;
+        lock (_staticTurretGlobalLock)
+        {
+            foreach (var bot in _staticTurretBots)
+            {
+                if (bot.Arena != arena) continue;
+                if (bot.Freq != freq) continue;
+                if (bot.Killed) continue;
+                if (turretKey is not null
+                    && !string.Equals(bot.TurretType.Key, turretKey, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                count++;
+            }
+        }
+        return count;
     }
 
     /// <summary>Remove a single bot matching position + freq (and optional turret-type key).</summary>
@@ -1045,6 +1069,13 @@ public sealed partial class SectorWar : IStaticTurret
         if (bot.Player is null) return;
 
         bot.Energy -= damage;
+
+        // Fire BotDamaged before the lethal-check so subscribers see every hit
+        // (including the fatal one). Snapshot identity here in case subscribers
+        // hold refs across the death path below.
+        BotDamaged?.Invoke(bot.Arena, bot.TurretType.Key,
+            bot.PixelX, bot.PixelY, bot.Freq, firedBy);
+
         if (bot.Energy > 0) return;
 
         // Death.

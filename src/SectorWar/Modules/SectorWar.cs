@@ -362,6 +362,8 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         LoadCompositeHitbox(broker);
         LoadHq(broker);                  // needs IStaticTurret (loaded above)
         LoadHqHud(broker);               // reads HqArenaState, must load AFTER Hq
+        LoadRoundManager(broker);        // hooks into Hq capital-kill path
+        LoadTutorial(broker);            // standalone LVZ-only — no deps
 
         // Async / persist subsystems. Market publishes IMarketReader and
         // also consumes IEconomy (Rpg above). StationDeployer needs
@@ -393,6 +395,8 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         await UnloadRpgAsync(broker, cancellationToken);
         await UnloadMarketAsync(broker, cancellationToken);
 
+        UnloadTutorial(broker);
+        UnloadRoundManager(broker);
         UnloadHqHud(broker);             // unload before Hq (consumer first)
         UnloadHq(broker);                // mirror reverse-load
         UnloadCompositeHitbox(broker);
@@ -494,6 +498,8 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         AttachStationDeployer(arena);
         AttachHq(arena);
         AttachHqHud(arena);              // after Hq so HqArenaState exists
+        AttachRoundManager(arena);
+        AttachTutorial(arena);
         AttachInventory(arena);
 
         _logManager.LogA(LogLevel.Info, LogCategory, arena,
@@ -525,6 +531,18 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         {
             _logManager.LogA(LogLevel.Warn, LogCategory, arena,
                 $"Inventory detach failed: {ex.Message}");
+        }
+        try { DetachTutorial(arena); }
+        catch (Exception ex)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"Tutorial detach failed: {ex.Message}");
+        }
+        try { DetachRoundManager(arena); }
+        catch (Exception ex)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"RoundManager detach failed: {ex.Message}");
         }
         try { DetachHqHud(arena); }
         catch (Exception ex)

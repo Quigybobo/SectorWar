@@ -86,6 +86,12 @@ public sealed partial class SectorWar
     /// Patrol cadence is much slower than this (seconds), so 1 Hz is plenty.</summary>
     private const int HqTickIntervalMs = 1000;
 
+    /// <summary>How long after the last damage hit on a capital its patrol
+    /// stays suppressed. Lets a battle play out instead of the capital
+    /// warping out mid-fight. 8s = covers the typical patrol window so the
+    /// capital won't slip away between volleys.</summary>
+    private const int HqCapitalDamageHoldMs = 8000;
+
     // ── HQ baseplate LVZ ────────────────────────────────────────────────────
     // Subsystem allocates one slot per HQ at AttachHq, returns it at DetachHq.
     // Image is 512×512 — half-size = 256 is subtracted from HQ center to
@@ -211,6 +217,14 @@ public sealed partial class SectorWar
         /// <summary>Mainloop time (ms) at which a dead capital should respawn.
         /// Ignored when Alive=true.</summary>
         public int DeadRespawnAtTickMs;
+        /// <summary>Mainloop time (ms) of the last perimeter-gun / command
+        /// defender kill on THIS HQ. Drives the HqHud DMG icon (amber state)
+        /// for a short window after a defender dies. 0 = never.</summary>
+        public int LastDefenderDeathTickMs;
+        /// <summary>Mainloop time (ms) of the last damage hit on the capital
+        /// itself. Drives the patrol-hold: the capital does NOT teleport
+        /// while it's under sustained fire (HqCapitalDamageHoldMs). 0 = never.</summary>
+        public int LastCapitalDamageTickMs;
     }
 
     internal sealed class HqArenaState
@@ -254,7 +268,10 @@ public sealed partial class SectorWar
         // it ignores other modules' turret kills.
         _hqStaticTurretForKills = broker.GetInterface<IStaticTurret>();
         if (_hqStaticTurretForKills is not null)
+        {
             _hqStaticTurretForKills.BotKilled += OnBotKilled_Hq;
+            _hqStaticTurretForKills.BotDamaged += OnBotDamaged_Hq;
+        }
 
         _mainloopTimer.SetTimer(OnTick_Hq, HqTickIntervalMs, HqTickIntervalMs, this);
 
@@ -268,6 +285,7 @@ public sealed partial class SectorWar
         if (_hqStaticTurretForKills is not null)
         {
             _hqStaticTurretForKills.BotKilled -= OnBotKilled_Hq;
+            _hqStaticTurretForKills.BotDamaged -= OnBotDamaged_Hq;
             broker.ReleaseInterface(ref _hqStaticTurretForKills);
         }
 
@@ -380,13 +398,15 @@ public sealed partial class SectorWar
 
             foreach (HqDefinition def in _hqDefinitions)
             {
-                // [Spawn] Team{N}-X / Team{N}-Y are tile coords (0..1023). The
-                // SubgameCompatibility module also accepts the no-hyphen form
-                // (Team0X), which is what this zone's settings.conf uses —
-                // SS.NET's Spawn block reads either. We use tiles → pixels:
-                // (tile << 4) + 8 puts us at tile-center.
-                int teamTileX = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}X", 512);
-                int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}Y", 512);
+                // [Spawn] Team{N}-X / Team{N}-Y are tile coords (0..1023).
+                // The hyphenated form is REQUIRED — SS.NET's ClientSettings
+                // reads `Team0-X` (with hyphen) for the client-settings packet
+                // that drives Continuum's spawn picker. The legacy Subgame
+                // `Team0X` form is NOT translated by SubgameCompatibility, so
+                // using it leaves spawn coords at default 0 and players spawn
+                // at the map origin. (tile << 4) + 8 puts us at tile-center.
+                int teamTileX = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}-X", 512);
+                int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}-Y", 512);
                 int centerPx = (teamTileX << 4) + 8;
                 int centerPy = (teamTileY << 4) + 8;
 
@@ -486,8 +506,8 @@ public sealed partial class SectorWar
             foreach (HqDefinition def in _hqDefinitions)
             {
                 var cfg = arena.Cfg!;
-                int teamTileX = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}X", 512);
-                int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}Y", 512);
+                int teamTileX = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}-X", 512);
+                int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{def.Freq}-Y", 512);
                 int centerPx = (teamTileX << 4) + 8;
                 int centerPy = (teamTileY << 4) + 8;
 
@@ -593,9 +613,18 @@ public sealed partial class SectorWar
                             continue;
                         }
 
-                        // Suppress patrol if any enemy player is within hold
-                        // range — the capital should hold position to fight.
+                        // Suppress patrol if any enemy player / hostile turret
+                        // bot is within hold range — the capital holds position
+                        // for combat.
                         if (EnemyWithinRange(arena, cap, ad.HqArenaState.EngageHoldPixels))
+                            continue;
+
+                        // Suppress patrol if the capital was recently hit even
+                        // if no enemy is within EngageHoldPixels right now (e.g.
+                        // a long-range warstation is shelling from outside the
+                        // proximity ring). Lets fights actually resolve.
+                        if (cap.LastCapitalDamageTickMs != 0
+                            && (uint)(nowMs - cap.LastCapitalDamageTickMs) < HqCapitalDamageHoldMs)
                             continue;
 
                         // Time for next warp?
@@ -619,9 +648,13 @@ public sealed partial class SectorWar
         return true;
     }
 
-    /// <summary>True iff any non-fake player on a different freq is within
-    /// `range` pixels of the capital's current corner. Used to gate the
-    /// teleport tick.</summary>
+    /// <summary>True iff any hostile player or hostile static-turret bot is
+    /// within `range` pixels of the capital's current corner. Used to gate
+    /// the teleport tick — capital holds position for combat.
+    ///
+    /// Fakes ARE counted (other freq's warstations / HQ defenders are valid
+    /// "engagement nearby" signals); only same-freq players + spectators are
+    /// skipped.</summary>
     private bool EnemyWithinRange(Arena arena, HqCapitalRuntime cap, int rangePx)
     {
         int capX = cap.CenterPixelX + cap.Corners[cap.CornerIndex].X;
@@ -634,7 +667,6 @@ public sealed partial class SectorWar
             foreach (Player p in _playerData.Players)
             {
                 if (p.Arena != arena) continue;
-                if (p.Type == ClientType.Fake) continue;
                 if (p.Ship == ShipType.Spec) continue;
                 if (p.Freq == cap.Freq) continue;
 
@@ -717,6 +749,12 @@ public sealed partial class SectorWar
         cap.LastWarpTickMs = nowMs;
         cap.CurrentPeriodMs = JitterPatrolPeriod(10000);
 
+        // Capital is back — unfreeze defender respawns so the HQ can rebuild
+        // its perimeter. The freeze was set when the capital died (so
+        // attackers had a clean window to clear defenders). With capital
+        // back, defenders should resume their normal 3s/6s respawn cadence.
+        staticTurret.FreezeRespawn(arena, cap.Freq, false);
+
         IWarpInEffect? warpIn = _hqBroker?.GetInterface<IWarpInEffect>();
         try { warpIn?.Play(arena, cx, cy, 1200, WarpInFlavor.FortressRed); }
         finally { if (warpIn is not null) _hqBroker?.ReleaseInterface(ref warpIn); }
@@ -733,13 +771,53 @@ public sealed partial class SectorWar
     // each arena's HqArenaState to find which capital died.
     // -------------------------------------------------------------------------
 
-    private void OnBotKilled_Hq(Arena arena, string turretKey, int pixelX, int pixelY,
-        short freq, Player? killer)
+    /// <summary>Stamp LastCapitalDamageTickMs on the matching capital so its
+    /// next patrol tick is suppressed for HqCapitalDamageHoldMs. Lets ongoing
+    /// fights resolve instead of the capital warping out mid-volley.</summary>
+    private void OnBotDamaged_Hq(Arena arena, string turretKey, int pixelX, int pixelY,
+        short freq, Player? firedBy)
     {
         if (!string.Equals(turretKey, HqCapitalKey, StringComparison.OrdinalIgnoreCase))
             return;
         if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return;
         if (ad.HqArenaState is null) return;
+
+        int now = Environment.TickCount;
+        foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
+        {
+            if (cap.Freq != freq) continue;
+            int cx = cap.CenterPixelX + cap.Corners[cap.CornerIndex].X;
+            int cy = cap.CenterPixelY + cap.Corners[cap.CornerIndex].Y;
+            if (Math.Abs(pixelX - cx) > 32 || Math.Abs(pixelY - cy) > 32) continue;
+            cap.LastCapitalDamageTickMs = now;
+            return;
+        }
+    }
+
+    private void OnBotKilled_Hq(Arena arena, string turretKey, int pixelX, int pixelY,
+        short freq, Player? killer)
+    {
+        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return;
+        if (ad.HqArenaState is null) return;
+
+        // Defender kill (perimeter gun / command core) — stamp the freq's
+        // capital so HqHud can light the amber DMG icon for a short window,
+        // then re-check the sudden-death gate: if the capital is already
+        // dead and this was the last surviving defender, end the round.
+        if (string.Equals(turretKey, HqPerimeterGunKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(turretKey, HqCommandKey, StringComparison.OrdinalIgnoreCase))
+        {
+            int now = Environment.TickCount;
+            foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
+            {
+                if (cap.Freq == freq) cap.LastDefenderDeathTickMs = now;
+            }
+            CheckSuddenDeathGate_Hq(arena, ad, freq);
+            return;
+        }
+
+        if (!string.Equals(turretKey, HqCapitalKey, StringComparison.OrdinalIgnoreCase))
+            return;
 
         foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
         {
@@ -757,7 +835,54 @@ public sealed partial class SectorWar
             _logManager.LogA(LogLevel.Info, LogCategory, arena,
                 $"HQ capital freq {freq} killed (by {killer?.Name ?? "?"}). " +
                 $"Respawn in {ad.HqArenaState.RespawnDelaySeconds}s.");
+
+            // Freeze defender respawns for this freq while capital is dead —
+            // gives the attacker a real window to clear the defenders. The
+            // freeze affects ALL fakes on this freq (perimeter guns + command
+            // + any player-deployed structures owned by the same freq), which
+            // is fine since the defending team's losing their HQ anyway.
+            // Unfrozen in RespawnHqCapital when capital comes back.
+            _hqStaticTurretForKills?.FreezeRespawn(arena, freq, true);
+
+            CheckSuddenDeathGate_Hq(arena, ad, freq);
             return;
+        }
+    }
+
+    /// <summary>
+    /// Round-end gate. Fired from BOTH the capital-kill path and each
+    /// defender-kill path so the round can end on either:
+    ///   - A capital kill that lands while all defenders are already dead, OR
+    ///   - A last-defender kill that lands while the capital is already dead.
+    /// Defender respawns are frozen while the capital is dead, so the
+    /// attacker has a 60s window to clear them before the capital returns.
+    /// </summary>
+    private void CheckSuddenDeathGate_Hq(Arena arena, ArenaData ad, short freq)
+    {
+        if (_hqStaticTurretForKills is null) return;
+        if (ad.HqArenaState is null) return;
+
+        // Capital must be dead.
+        bool capitalDead = false;
+        foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
+        {
+            if (cap.Freq != freq) continue;
+            capitalDead = !cap.Alive;
+            break;
+        }
+        if (!capitalDead) return;
+
+        int liveGuns = _hqStaticTurretForKills.CountBots(arena, freq, HqPerimeterGunKey);
+        int liveCommand = _hqStaticTurretForKills.CountBots(arena, freq, HqCommandKey);
+        if (liveGuns == 0 && liveCommand == 0)
+        {
+            OnHqCapitalKilled_RoundManager(arena, freq);
+        }
+        else
+        {
+            _logManager.LogA(LogLevel.Drivel, LogCategory, arena,
+                $"Sudden-death gate freq {freq}: " +
+                $"capital dead, {liveGuns} gun(s) + {liveCommand} command core(s) remain.");
         }
     }
 
@@ -771,5 +896,80 @@ public sealed partial class SectorWar
     {
         double frac = 0.8 + (_hqJitterRng.NextDouble() * 0.4);
         return Math.Max(1000, (int)(basePeriodMs * frac));
+    }
+
+    /// <summary>
+    /// Tear down a single freq's HQ entirely (defenders + capital + baseplate).
+    /// Called by RoundManager on round-end so the destroyed HQ visibly stays
+    /// gone during the 30s celebration before the full-reset respawn. Does
+    /// NOT remove the freq's HqCapitalRuntime entry — the round-reset path
+    /// expects the runtime list intact and will rebuild via DespawnHqArena
+    /// + TrySpawnHqArena.
+    /// </summary>
+    internal void HideHqForFreq(Arena arena, short freq)
+    {
+        if (_hqBroker is null) return;
+        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return;
+        if (ad.HqArenaState is null) return;
+
+        IStaticTurret? staticTurret = _hqBroker.GetInterface<IStaticTurret>();
+        if (staticTurret is null) return;
+        try
+        {
+            var cfg = arena.Cfg!;
+            HqDefinition? def = null;
+            foreach (var d in _hqDefinitions) if (d.Freq == freq) { def = d; break; }
+            if (def is null) return;
+
+            int teamTileX = _configManager.GetInt(cfg, "Spawn", $"Team{freq}-X", 512);
+            int teamTileY = _configManager.GetInt(cfg, "Spawn", $"Team{freq}-Y", 512);
+            int centerPx = (teamTileX << 4) + 8;
+            int centerPy = (teamTileY << 4) + 8;
+
+            // Despawn each defender slot. Use the slot's expected position;
+            // skip-on-failure so a missing/respawning defender doesn't abort
+            // the rest of the cleanup.
+            foreach (HqTurretSlot slot in def.Defenders)
+            {
+                int sx = centerPx + slot.OffsetX;
+                int sy = centerPy + slot.OffsetY;
+                try { staticTurret.RemoveBotAt(arena, sx, sy, freq, slot.TurretKey); }
+                catch { /* best-effort */ }
+            }
+
+            // Capital may already be dead (we got here because it was just killed).
+            // If somehow still alive (race), tear it down too.
+            foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
+            {
+                if (cap.Freq != freq || !cap.Alive) continue;
+                int cx = cap.CenterPixelX + cap.Corners[cap.CornerIndex].X;
+                int cy = cap.CenterPixelY + cap.Corners[cap.CornerIndex].Y;
+                try { staticTurret.RemoveBotAt(arena, cx, cy, freq, HqCapitalKey); }
+                catch { /* best-effort */ }
+                cap.Alive = false;
+                // Park respawn timer FAR in the future so the existing patrol
+                // tick doesn't try to respawn during the round-end window.
+                cap.DeadRespawnAtTickMs = Environment.TickCount + (24 * 60 * 60 * 1000);
+            }
+
+            // Hide the freq's baseplate. BaseplateIds is populated in the
+            // same order as _hqDefinitions — index = freq for the standard 2-freq layout.
+            int idx = -1;
+            for (int i = 0; i < _hqDefinitions.Length; i++)
+                if (_hqDefinitions[i].Freq == freq) { idx = i; break; }
+            if (idx >= 0 && idx < ad.HqArenaState.BaseplateIds.Count)
+            {
+                short bid = ad.HqArenaState.BaseplateIds[idx];
+                try { _lvzObjects.Toggle(arena, bid, false); }
+                catch { /* best-effort */ }
+            }
+        }
+        finally
+        {
+            _hqBroker.ReleaseInterface(ref staticTurret);
+        }
+
+        _logManager.LogA(LogLevel.Info, LogCategory, arena,
+            $"HQ freq {freq} hidden for round-end window.");
     }
 }

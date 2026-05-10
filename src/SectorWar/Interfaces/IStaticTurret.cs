@@ -85,6 +85,14 @@ public interface IStaticTurret : IComponentInterface
         string? turretKey, int newPixelX, int newPixelY);
 
     /// <summary>
+    /// Count live (not-killed, not-build-pending) bots in <paramref name="arena"/>
+    /// matching <paramref name="freq"/>. Pass <paramref name="turretKey"/> to
+    /// filter by type, or null to count any type. Used e.g. by RoundManager
+    /// to gate sudden-death win on "all defenders cleared".
+    /// </summary>
+    int CountBots(Arena arena, short freq, string? turretKey);
+
+    /// <summary>
     /// Fired on the mainloop thread when a registered turret bot's energy hits
     /// zero from real-player bullet damage (server-side detection via IDamage).
     /// Args: (arena, turretKey, pixelX, pixelY, freq, killer). Subscribers
@@ -92,4 +100,13 @@ public interface IStaticTurret : IComponentInterface
     /// position + freq to clean up the corresponding deployable.
     /// </summary>
     event Action<Arena, string, int, int, short, Player?>? BotKilled;
+
+    /// <summary>
+    /// Fired on the mainloop thread when a registered turret bot takes damage
+    /// (regardless of whether it's lethal). Args: (arena, turretKey, pixelX,
+    /// pixelY, freq, firedBy). Useful for "is this thing under attack" gates
+    /// — e.g. SectorWar.Hq.cs uses this to pause the patrolling capital's
+    /// teleport while combat is active.
+    /// </summary>
+    event Action<Arena, string, int, int, short, Player?>? BotDamaged;
 }

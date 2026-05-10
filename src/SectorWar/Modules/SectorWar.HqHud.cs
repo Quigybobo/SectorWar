@@ -18,11 +18,11 @@ namespace SS.SectorWar.Modules;
 //
 // State (per freq) is driven by the existing HqArenaState.Capitals data
 // the Hq subsystem already maintains:
-//   OK   — capital is Alive (steady cyan icon).
+//   OK   — capital is Alive AND no defender died recently (steady cyan).
+//   DMG  — capital is Alive but a perimeter gun / command core died within
+//          the last HqHudDmgWindowMs (amber icon). The Hq subsystem stamps
+//          HqCapitalRuntime.LastDefenderDeathTickMs in OnBotKilled_Hq.
 //   CRIT — capital is dead, awaiting module-driven respawn (red icon w/ X).
-//   DMG  — RESERVED for future defender-damage tracking (amber icon). Not
-//          driven yet because IStaticTurret doesn't expose a BotRespawned
-//          event, so we'd need manual aging — left as a follow-up.
 //
 // LVZ POOL
 //   - 9350  freq-0 HQ HUD slot
@@ -68,6 +68,12 @@ public sealed partial class SectorWar
 
     /// <summary>Tick cadence for HUD state polling.</summary>
     private const int HqHudTickMs = 1000;
+
+    /// <summary>How long the amber DMG icon stays lit after the most recent
+    /// defender (perimeter gun / command core) kill. Defenders respawn on
+    /// their own (infiniteRespawn=true), so this window is the player-facing
+    /// signal that the HQ is currently under fire.</summary>
+    private const int HqHudDmgWindowMs = 8000;
 
     /// <summary>Screen-relative position above the mini-map. Anchor = R
     /// (top-left of radar). X stride matches SectorClaimVisualColumnXStep
@@ -186,20 +192,20 @@ public sealed partial class SectorWar
 
                 // Read each freq's HQ capital state from the Hq subsystem's
                 // existing tracker. Capitals[] order parallels _hqDefinitions
-                // (freq 0 first, freq 1 second).
-                bool freq0Alive = true;
-                bool freq1Alive = true;
+                // (freq 0 first, freq 1 second). Resolve a 3-state image:
+                // dead capital → CRIT, recent defender death → DMG, else OK.
+                int now = Environment.TickCount;
+                byte target0 = HqHudImageOk;
+                byte target1 = HqHudImageOk;
                 if (ad.HqArenaState is { } hqState)
                 {
                     foreach (var cap in hqState.Capitals)
                     {
-                        if (cap.Freq == 0) freq0Alive = cap.Alive;
-                        else if (cap.Freq == 1) freq1Alive = cap.Alive;
+                        byte img = ResolveHqHudImage(cap, now);
+                        if (cap.Freq == 0) target0 = img;
+                        else if (cap.Freq == 1) target1 = img;
                     }
                 }
-
-                byte target0 = freq0Alive ? HqHudImageOk : HqHudImageCrit;
-                byte target1 = freq1Alive ? HqHudImageOk : HqHudImageCrit;
 
                 if (target0 != hud.LastImageFreq0)
                 {
@@ -217,5 +223,14 @@ public sealed partial class SectorWar
         }
         finally { _arenaManager.Unlock(); }
         return true;
+    }
+
+    private static byte ResolveHqHudImage(HqCapitalRuntime cap, int nowMs)
+    {
+        if (!cap.Alive) return HqHudImageCrit;
+        if (cap.LastDefenderDeathTickMs != 0
+            && (uint)(nowMs - cap.LastDefenderDeathTickMs) < HqHudDmgWindowMs)
+            return HqHudImageDmg;
+        return HqHudImageOk;
     }
 }

@@ -562,9 +562,72 @@ public sealed partial class SectorWar : IStationDeployer
         IStationDeployer self = this;
         var inst = self.Deploy(player.Arena, typeKey, player.Position.X, player.Position.Y,
             player.Freq, player);
-        if (inst is null) _chat.SendMessage(player, "Deploy failed (check server log).");
-        else _chat.SendMessage(player,
-            $"{StationDeployerTypes[typeKey].DisplayName} deployed at ({inst.CenterPixelX},{inst.CenterPixelY}).");
+        if (inst is null) { _chat.SendMessage(player, "Deploy failed (check server log)."); return; }
+
+        var typeDef = StationDeployerTypes[typeKey];
+        _chat.SendMessage(player,
+            $"{typeDef.DisplayName} deployed at ({inst.CenterPixelX},{inst.CenterPixelY}).");
+
+        // Power-state feedback. Compare each turret slot's RequiredPower
+        // against the freq's current pylon count so the deployer sees
+        // immediately whether their network can power the structure
+        // (or which slots are dormant). Saves a 200K-credit warstation
+        // sitting idle because the player only has 1 pylon.
+        ReportDeployPowerState_StationDeployer(player, typeDef);
+    }
+
+    private void ReportDeployPowerState_StationDeployer(Player player, StationDeployerStructureTypeDef typeDef)
+    {
+        if (_stationDeployerBroker is null) return;
+        if (player.Arena is null) return;
+
+        IPylon? pylon = _stationDeployerBroker.GetInterface<IPylon>();
+        if (pylon is null) return;
+        int friendlyPylons;
+        try
+        {
+            friendlyPylons = 0;
+            foreach (var p in pylon.GetPylons(player.Arena))
+                if (p.OwnerFreq == player.Freq) friendlyPylons++;
+        }
+        finally { _stationDeployerBroker.ReleaseInterface(ref pylon); }
+
+        if (!arena_TryGetTurretTypes(player.Arena, out var turretTypes)) return;
+
+        // Tally how many slots of each turret type are powered vs not.
+        int totalSlots = 0, powered = 0;
+        var unpoweredTypes = new HashSet<string>();
+        foreach (var slot in typeDef.Turrets)
+        {
+            totalSlots++;
+            if (!turretTypes.TryGetValue(slot.TurretKey, out var tt)) continue;
+            if (tt.RequiredPower <= friendlyPylons) powered++;
+            else unpoweredTypes.Add($"{slot.TurretKey} (needs {tt.RequiredPower})");
+        }
+
+        if (powered == totalSlots)
+        {
+            _chat.SendMessage(player, $"  Power: {friendlyPylons} pylon(s). All {totalSlots} turrets active.");
+        }
+        else
+        {
+            string need = string.Join(", ", unpoweredTypes);
+            _chat.SendMessage(player,
+                $"  Power: {friendlyPylons} pylon(s). {powered}/{totalSlots} turrets active. " +
+                $"Build more pylons to activate: {need}.");
+        }
+    }
+
+    /// <summary>Helper to peek at StaticTurretType definitions through the
+    /// arena data — needed for power-vs-required comparison at deploy time.
+    /// Internal access lets us avoid round-tripping through IStaticTurret.</summary>
+    private bool arena_TryGetTurretTypes(Arena arena,
+        out IReadOnlyDictionary<string, StaticTurretType> types)
+    {
+        types = null!;
+        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return false;
+        types = ad.StaticTurretTypes;
+        return true;
     }
 
     [CommandHelp(Targets = CommandTarget.None, Args = null,

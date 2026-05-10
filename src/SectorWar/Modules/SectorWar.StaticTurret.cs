@@ -178,6 +178,15 @@ public sealed partial class SectorWar : IStaticTurret
     /// <summary>Pixels of penalty for "wrong ship type" targets when ShipFavour configured.</summary>
     private const int StaticTurretSpecificShipFavour = 100;
 
+    /// <summary>Target stickiness — once a turret is locked onto a target,
+    /// it prefers that target unless a new candidate is THIS percent (or
+    /// less) of the current target's distance. 80 = "switch only if the
+    /// new target is &lt; 80% of current distance". Cuts down on the
+    /// rapid-flip jitter when two enemies are roughly equidistant
+    /// (capital + perimeter gun, two players in formation, etc.).
+    /// 100 disables stickiness; 50 = "must be at least half as close".</summary>
+    private const int StaticTurretTargetStickyPercent = 80;
+
     /// <summary>Periodic position-packet broadcast interval. ASSS uses 25 ticks (250ms).</summary>
     private const int StaticTurretPositionPacketIntervalMs = 250;
 
@@ -1335,6 +1344,11 @@ public sealed partial class SectorWar : IStaticTurret
         Arena arena = bot.Arena;
         Player? best = null;
         long bestDist = long.MaxValue;
+        // Sticky target tracking — record the previous target's current
+        // distance + LOS-clear state so we can apply stickiness at the end.
+        Player? sticky = bot.Targeting;
+        long stickyDist = long.MaxValue;
+        bool stickyValid = false;
         long sightSq = (long)bot.TurretType.WeaponSightPixels * bot.TurretType.WeaponSightPixels;
 
         _playerData.Lock();
@@ -1378,10 +1392,19 @@ public sealed partial class SectorWar : IStaticTurret
                 if ((int)p.Ship != ad.StaticTurretShipFavour)
                     dist += StaticTurretSpecificShipFavour;
 
-                if (dist < bestDist &&
-                    IsPathClear_StaticTurret(arena, bot.PixelX >> 4, bot.PixelY >> 4,
-                        x1 >> 4, y1 >> 4,
-                        bot.TurretType.WeaponType == (byte)WeaponCodes.Thor))
+                bool losClear = IsPathClear_StaticTurret(arena, bot.PixelX >> 4, bot.PixelY >> 4,
+                    x1 >> 4, y1 >> 4,
+                    bot.TurretType.WeaponType == (byte)WeaponCodes.Thor);
+
+                // Track the sticky target's current distance — only counts if
+                // sight + LOS still hold (else fall back to nearest).
+                if (sticky is not null && ReferenceEquals(p, sticky) && losClear)
+                {
+                    stickyDist = dist;
+                    stickyValid = true;
+                }
+
+                if (dist < bestDist && losClear)
                 {
                     best = p;
                     bestDist = dist;
@@ -1393,6 +1416,12 @@ public sealed partial class SectorWar : IStaticTurret
             _playerData.Unlock();
         }
 
+        // Stickiness gate: if the previous target is still in sight + LOS,
+        // stay on it unless a new candidate is significantly closer. Cuts
+        // the per-tick jitter when two enemies are roughly equidistant
+        // (capital + perimeter gun, players in formation, etc.).
+        if (stickyValid && bestDist > (stickyDist * StaticTurretTargetStickyPercent) / 100)
+            return sticky;
         return best;
     }
 

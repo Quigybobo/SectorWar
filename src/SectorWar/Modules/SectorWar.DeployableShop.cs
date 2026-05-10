@@ -103,7 +103,7 @@ public sealed partial class SectorWar : IDeployableShop
         new("outpost",    "Outpost",    DeployableShopOutpostCost,
             "4 corner turrets + escort frigate. Needs pylon power."),
         new("warstation", "WarStation", DeployableShopWarStationCost,
-            "8 perimeter guns + heavy command core. Command needs 3 pylons."),
+            "8 perimeter guns + heavy command core. 1 pylon powers guns; 2 pylons unlocks command."),
     };
 
     // -------------------------------------------------------------------------

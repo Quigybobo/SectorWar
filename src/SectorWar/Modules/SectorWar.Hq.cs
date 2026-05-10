@@ -114,6 +114,27 @@ public sealed partial class SectorWar
     private const string HqPerimeterGunKey = "hq_perimeter_gun";
     private const string HqCommandKey = "hq_command";
     private const string HqCapitalKey = "hq_capital";
+    private const string HqCapitalCannonGunKey = "hq_capital_gun";
+    private const string HqCapitalCannonBombKey = "hq_capital_bomb";
+
+    // Layout of mounted cannons relative to the capital's CURRENT corner.
+    // Offsets are in pixels; (0,0) is the bridge. The layout assumes the
+    // capital faces north (default rotation) — Continuum's static-turret
+    // AI rotates each cannon independently to track its target, so layout
+    // doesn't need to rotate with capital heading.
+    //
+    // Visual: cannons sit ON the Lancaster hull, well inside the painted
+    // ~50px radius. Bullet cannons in a tight 48x32 box around the bridge,
+    // bomb cannons at the fore/aft tips of the hull (±28 px from center).
+    private static readonly (string Key, int OffsetX, int OffsetY)[] HqCapitalCannonLayout =
+    {
+        (HqCapitalCannonGunKey,  -24, -16),  // port-fore bullet
+        (HqCapitalCannonGunKey,   24, -16),  // starboard-fore bullet
+        (HqCapitalCannonGunKey,  -24,  16),  // port-aft bullet
+        (HqCapitalCannonGunKey,   24,  16),  // starboard-aft bullet
+        (HqCapitalCannonBombKey,   0, -30),  // fore bomb
+        (HqCapitalCannonBombKey,   0,  30),  // aft bomb
+    };
 
     // -------------------------------------------------------------------------
     // HQ DEFINITION TABLE
@@ -473,6 +494,8 @@ public sealed partial class SectorWar
             return null;
         }
 
+        SpawnHqCapitalCannons(arena, staticTurret, def.Freq, cornerPx, cornerPy);
+
         return new HqCapitalRuntime
         {
             Freq = def.Freq,
@@ -484,6 +507,67 @@ public sealed partial class SectorWar
             CurrentPeriodMs = JitterPatrolPeriod(10000),
             Alive = true,
         };
+    }
+
+    /// <summary>Spawn the 6 mounted cannons (4 bullet + 2 bomb) at fixed
+    /// offsets from the capital's current bridge position. Best-effort —
+    /// individual cannon spawn failures log + continue. Cannons are
+    /// independently destroyable but die with the capital.</summary>
+    private void SpawnHqCapitalCannons(Arena arena, IStaticTurret staticTurret,
+        short freq, int bridgePx, int bridgePy)
+    {
+        int spawned = 0;
+        foreach ((string key, int dx, int dy) in HqCapitalCannonLayout)
+        {
+            int cx = bridgePx + dx;
+            int cy = bridgePy + dy;
+            AddBotResult res = staticTurret.AddBot(arena, key, cx, cy, freq,
+                infiniteRespawn: false, noLocationCheck: true);
+            if (res == AddBotResult.Ok) spawned++;
+            else
+            {
+                // Warn level so config issues (UnknownType from missing
+                // [SectorWar] StaticTurretTurretN registration) are visible.
+                _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                    $"HQ capital cannon '{key}' freq {freq} at ({cx},{cy}) failed: {res}.");
+            }
+        }
+        if (spawned > 0)
+            _logManager.LogA(LogLevel.Info, LogCategory, arena,
+                $"HQ capital freq {freq}: {spawned}/{HqCapitalCannonLayout.Length} mounted cannons spawned.");
+    }
+
+    /// <summary>Tear down all 6 mounted cannons at their current positions
+    /// (computed from the bridge position passed in). Best-effort — cannons
+    /// already dead are silently skipped by RemoveBotAt.</summary>
+    private void DespawnHqCapitalCannons(Arena arena, IStaticTurret staticTurret,
+        short freq, int bridgePx, int bridgePy)
+    {
+        foreach ((string key, int dx, int dy) in HqCapitalCannonLayout)
+        {
+            int cx = bridgePx + dx;
+            int cy = bridgePy + dy;
+            try { staticTurret.RemoveBotAt(arena, cx, cy, freq, key); }
+            catch { /* best-effort */ }
+        }
+    }
+
+    /// <summary>Move all 6 cannons from their old offsets-from-old-bridge
+    /// to their new offsets-from-new-bridge. Cannons that were killed
+    /// before the warp won't be at the expected old position; MoveBot
+    /// returns false in that case which we ignore.</summary>
+    private void MoveHqCapitalCannons(Arena arena, IStaticTurret staticTurret,
+        short freq, int oldBridgePx, int oldBridgePy, int newBridgePx, int newBridgePy)
+    {
+        foreach ((string key, int dx, int dy) in HqCapitalCannonLayout)
+        {
+            int oldX = oldBridgePx + dx;
+            int oldY = oldBridgePy + dy;
+            int newX = newBridgePx + dx;
+            int newY = newBridgePy + dy;
+            try { staticTurret.MoveBot(arena, oldX, oldY, freq, key, newX, newY); }
+            catch { /* best-effort */ }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -527,6 +611,8 @@ public sealed partial class SectorWar
                 int cy = cap.CenterPixelY + cap.Corners[cap.CornerIndex].Y;
                 try { staticTurret.RemoveBotAt(arena, cx, cy, cap.Freq, HqCapitalKey); }
                 catch { /* best-effort */ }
+                // Mounted cannons share fate with the capital.
+                DespawnHqCapitalCannons(arena, staticTurret, cap.Freq, cx, cy);
             }
 
             // Toggle off + recycle baseplate LVZ slots.
@@ -716,6 +802,10 @@ public sealed partial class SectorWar
             return;
         }
 
+        // Move the 6 mounted cannons to keep their offset relative to the
+        // capital's new bridge position.
+        MoveHqCapitalCannons(arena, staticTurret, cap.Freq, oldCx, oldCy, newCx, newCy);
+
         cap.CornerIndex = nextIndex;
 
         // Warp-in flash at the new position.
@@ -744,6 +834,9 @@ public sealed partial class SectorWar
             cap.DeadRespawnAtTickMs = nowMs + 1000;
             return;
         }
+
+        // Respawn the 6 mounted cannons alongside the capital.
+        SpawnHqCapitalCannons(arena, staticTurret, cap.Freq, cx, cy);
 
         cap.Alive = true;
         cap.LastWarpTickMs = nowMs;
@@ -835,6 +928,11 @@ public sealed partial class SectorWar
             _logManager.LogA(LogLevel.Info, LogCategory, arena,
                 $"HQ capital freq {freq} killed (by {killer?.Name ?? "?"}). " +
                 $"Respawn in {ad.HqArenaState.RespawnDelaySeconds}s.");
+
+            // Mounted cannons die WITH the capital. Tear down all 6 from
+            // their offsets-from-bridge at the capital's killed position.
+            if (_hqStaticTurretForKills is not null)
+                DespawnHqCapitalCannons(arena, _hqStaticTurretForKills, freq, cx, cy);
 
             // Freeze defender respawns for this freq while capital is dead —
             // gives the attacker a real window to clear the defenders. The
@@ -938,15 +1036,21 @@ public sealed partial class SectorWar
             }
 
             // Capital may already be dead (we got here because it was just killed).
-            // If somehow still alive (race), tear it down too.
+            // If somehow still alive (race), tear it down too. Cannons share
+            // the capital's fate either way — clean them up at the last-known
+            // bridge position.
             foreach (HqCapitalRuntime cap in ad.HqArenaState.Capitals)
             {
-                if (cap.Freq != freq || !cap.Alive) continue;
+                if (cap.Freq != freq) continue;
                 int cx = cap.CenterPixelX + cap.Corners[cap.CornerIndex].X;
                 int cy = cap.CenterPixelY + cap.Corners[cap.CornerIndex].Y;
-                try { staticTurret.RemoveBotAt(arena, cx, cy, freq, HqCapitalKey); }
-                catch { /* best-effort */ }
-                cap.Alive = false;
+                if (cap.Alive)
+                {
+                    try { staticTurret.RemoveBotAt(arena, cx, cy, freq, HqCapitalKey); }
+                    catch { /* best-effort */ }
+                    cap.Alive = false;
+                }
+                DespawnHqCapitalCannons(arena, staticTurret, freq, cx, cy);
                 // Park respawn timer FAR in the future so the existing patrol
                 // tick doesn't try to respawn during the round-end window.
                 cap.DeadRespawnAtTickMs = Environment.TickCount + (24 * 60 * 60 * 1000);

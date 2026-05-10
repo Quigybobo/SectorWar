@@ -55,6 +55,24 @@ per ship section. There are eight ship sections (Warbird, Javelin, Spider,
 Leviathan, Terrier, Weasel, Lancaster, Shark), plus `[Spectator]` for the
 `ShowLvz` key only.
 
+## Static-turret type registration
+
+The `[SectorWar] StaticTurretTurret{N}` indexed list registers turret types,
+each pointing at its own `[staticturret_<value>]` section. The convention
+phong wants enforced (and that the parser requires):
+
+- **Named keys, not numeric.** `StaticTurretTurret0 = pylon` →
+  `[staticturret_pylon]`. Never `StaticTurretTurret0 = 0` →
+  `[staticturret_0]`.
+- **Values must be unique.** Duplicate values trigger a Warn and the
+  second registration is dropped on the floor.
+- **Indices must be sequential from 0.** The parser loops 0..99 and breaks
+  on the first empty entry, so a gap in numbering silently truncates the
+  list.
+
+When adding a new turret type: append to the next free `StaticTurretTurretN`
+index, define `[staticturret_<name>]` in the same file, never reuse a name.
+
 ## Project shape
 
 - One umbrella `IArenaAttachableModule` (`SectorWar`) split across many

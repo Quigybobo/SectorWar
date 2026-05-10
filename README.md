@@ -103,8 +103,10 @@ locks the plugin DLL while the zone is running.
    ```
 
 4. Add the `[SectorWar]` conf section in the same arena.conf — see
-   [docs/SECTORWAR_CONF.md](docs/SECTORWAR_CONF.md) for the complete key
-   reference.
+   [arenas/sectorwar/](arenas/sectorwar/) for a working reference set
+   (arena.conf + settings.conf + structures.conf + floor.conf) and
+   [docs/ARENA_SETTINGS.md](docs/ARENA_SETTINGS.md) for the complete
+   `[SectorWar]` key reference.
 
 5. Make sure capability entries exist in `conf/groupdef.dir/default` and
    `conf/groupdef.dir/sysop`. SectorWar registers the commands listed

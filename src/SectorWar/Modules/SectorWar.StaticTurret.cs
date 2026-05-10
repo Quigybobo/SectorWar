@@ -688,6 +688,22 @@ public sealed partial class SectorWar : IStaticTurret
         // Position broadcast outside the lock — FakePosition can call into
         // network code; nesting global-lock under that risks deadlock.
         SendPositionUpdate_StaticTurret(toMove, fireWeapon: false);
+
+        // If this bot has an LVZ cannon overlay, the overlay was positioned
+        // at AddBot-time and stays glued there. Re-position it to the new
+        // bridge so a moving turret (HQ capital cannons) drags its visible
+        // cannon along with it.
+        if (toMove.CannonLvzId >= StaticTurretCannonPoolStart)
+        {
+            short bx = (short)(newPixelX - StaticTurretCannonHalfSize);
+            short by = (short)(newPixelY - StaticTurretCannonHalfSize);
+            try
+            {
+                _lvzObjects.SetPosition(arena, toMove.CannonLvzId, bx, by,
+                    ScreenOffset.Normal, ScreenOffset.Normal);
+            }
+            catch { /* phong's no-crash rule */ }
+        }
         return true;
     }
 

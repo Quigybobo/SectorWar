@@ -108,6 +108,20 @@ Defender turret stats live in `[staticturret_hq_perimeter_gun]`,
 | `HqCapitalEngageHoldPixels` | int (px) | 1024 | 64 | 16383 | no | Any enemy player within this radius pauses the capital's patrol so StaticTurret AI can engage. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
 | `HqCapitalRespawnDelaySeconds` | int (sec) | 60 | 1 | 9999 | no | Seconds after a capital is killed before module-driven respawn at HQ corner 0. | [SectorWar.Hq.cs](../src/SectorWar/Modules/SectorWar.Hq.cs) |
 
+### GunTurret (player-attached turret bots)
+
+Slave-fire turrets ignore these. The 8 auto-fire variants
+(`Auto Cannon` Mk.1-4 + `Auto Bomb Pod` Mk.1-4, IDs 5021-5024 +
+5031-5034) read these to drive their independent target acquisition +
+fire cadence. Anchor fire takes priority — auto-fire is suppressed for
+`GunTurretAnchorPriorityWindowMs` after each anchor shot.
+
+| Key | Type | Default | Min | Max | Nullable | Description | Source |
+|---|---|---|---|---|---|---|---|
+| `GunTurretAutoFireSightPixels` | int (px) | 480 | 32 | 16383 | no | Auto-fire turret sight range. Targets beyond this radius are ignored. | [SectorWar.GunTurret.cs](../src/SectorWar/Modules/SectorWar.GunTurret.cs) |
+| `GunTurretAutoFireDelayMs` | int (ms) | 500 | 50 | 99999 | no | Min ms between auto-fired shots per turret. | [SectorWar.GunTurret.cs](../src/SectorWar/Modules/SectorWar.GunTurret.cs) |
+| `GunTurretAnchorPriorityWindowMs` | int (ms) | 500 | 0 | 99999 | no | After the anchor fires, suppress auto-fire on its turrets for this many ms. | [SectorWar.GunTurret.cs](../src/SectorWar/Modules/SectorWar.GunTurret.cs) |
+
 ### StaticTurret (umbrella keys)
 
 | Key | Type | Default | Min | Max | Nullable | Description | Source |

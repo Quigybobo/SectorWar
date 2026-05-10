@@ -36,21 +36,35 @@ public static class ItemCatalog
         }
 
         // Twin-wing turret cannons (occupy WeaponMod slot — competes with Bullets Mk.X buffs).
-        // Bullet cannons: 4 tiers
+        // Bullet cannons: 4 tiers (slave-fire — fires only when the anchor fires).
         list.Add(MakeTurret(5001, 1, "Twin Cannon Mk.1",  WeaponCodes.Bullet, 0, 2_000));
         list.Add(MakeTurret(5002, 2, "Twin Cannon Mk.2",  WeaponCodes.Bullet, 1, 8_000));
         list.Add(MakeTurret(5003, 3, "Twin Cannon Mk.3",  WeaponCodes.Bullet, 2, 32_000));
         list.Add(MakeTurret(5004, 4, "Twin Cannon Mk.4",  WeaponCodes.Bullet, 3, 128_000));
-        // Bomb pods: 4 tiers
+        // Bomb pods: 4 tiers (slave-fire).
         list.Add(MakeTurret(5011, 1, "Twin Bomb Pod Mk.1", WeaponCodes.Bomb,  0, 4_000));
         list.Add(MakeTurret(5012, 2, "Twin Bomb Pod Mk.2", WeaponCodes.Bomb,  1, 16_000));
         list.Add(MakeTurret(5013, 3, "Twin Bomb Pod Mk.3", WeaponCodes.Bomb,  2, 64_000));
         list.Add(MakeTurret(5014, 4, "Twin Bomb Pod Mk.4", WeaponCodes.Bomb,  3, 256_000));
 
+        // AUTO-FIRE variants (cost ~2× the slave equivalent, autoFire flag set).
+        // Same hardpoints, same ship class, but each turret independently scans
+        // for nearest enemy in LOS and fires when the anchor isn't firing.
+        // Auto Cannons: 4 tiers
+        list.Add(MakeTurret(5021, 1, "Auto Cannon Mk.1",  WeaponCodes.Bullet, 0,   4_000, autoFire: true));
+        list.Add(MakeTurret(5022, 2, "Auto Cannon Mk.2",  WeaponCodes.Bullet, 1,  16_000, autoFire: true));
+        list.Add(MakeTurret(5023, 3, "Auto Cannon Mk.3",  WeaponCodes.Bullet, 2,  64_000, autoFire: true));
+        list.Add(MakeTurret(5024, 4, "Auto Cannon Mk.4",  WeaponCodes.Bullet, 3, 256_000, autoFire: true));
+        // Auto Bomb Pods: 4 tiers
+        list.Add(MakeTurret(5031, 1, "Auto Bomb Pod Mk.1", WeaponCodes.Bomb,  0,   8_000, autoFire: true));
+        list.Add(MakeTurret(5032, 2, "Auto Bomb Pod Mk.2", WeaponCodes.Bomb,  1,  32_000, autoFire: true));
+        list.Add(MakeTurret(5033, 3, "Auto Bomb Pod Mk.3", WeaponCodes.Bomb,  2, 128_000, autoFire: true));
+        list.Add(MakeTurret(5034, 4, "Auto Bomb Pod Mk.4", WeaponCodes.Bomb,  3, 512_000, autoFire: true));
+
         return list.ToArray();
     }
 
-    private static ItemDefinition MakeTurret(int id, int tier, string displayName, WeaponCodes weapon, byte level, long cost) =>
+    private static ItemDefinition MakeTurret(int id, int tier, string displayName, WeaponCodes weapon, byte level, long cost, bool autoFire = false) =>
         new ItemDefinition
         {
             Id = id,
@@ -59,7 +73,7 @@ public static class ItemCatalog
             Tier = tier,
             Cost = cost,
             Modifiers = Array.Empty<ItemModifier>(),
-            Grant = new TurretGrant(weapon, level),
+            Grant = new TurretGrant(weapon, level, autoFire),
         };
 
     private static long CostForTier(int tier) => 50L * tier * tier;

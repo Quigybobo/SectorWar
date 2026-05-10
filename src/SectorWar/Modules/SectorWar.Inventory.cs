@@ -712,8 +712,8 @@ public sealed partial class SectorWar : IInventory
         (int lx, int ly) = Hardpoints.Offset(ship, Hardpoint.LeftWing);
         (int rx, int ry) = Hardpoints.Offset(ship, Hardpoint.RightWing);
 
-        var leftInfo = new GunTurretInfo($"{ship}-L", ship, lx, ly, 0, grant.Weapon, grant.Level);
-        var rightInfo = new GunTurretInfo($"{ship}-R", ship, rx, ry, 0, grant.Weapon, grant.Level);
+        var leftInfo = new GunTurretInfo($"{ship}-L", ship, lx, ly, 0, grant.Weapon, grant.Level, grant.AutoFire);
+        var rightInfo = new GunTurretInfo($"{ship}-R", ship, rx, ry, 0, grant.Weapon, grant.Level, grant.AutoFire);
         _inventoryGunTurret.AddTurret(player, leftInfo);
         _inventoryGunTurret.AddTurret(player, rightInfo);
     }

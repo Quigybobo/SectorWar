@@ -242,8 +242,19 @@ public sealed partial class SectorWar : IStaticTurret
         /// set (>= 0), the bot's ship sprite is hidden via Cloak+Stealth+UFO
         /// status bits and a cannon LVZ object is drawn at the bot's center.
         /// Set to -1 (default) to keep the visible ship sprite (legacy behavior).
+        /// When OverlayImageRotationCount &gt; 1 this is the BASE index of a
+        /// rotation set; SetImage(base + frame) is called on rotation change.
         /// </summary>
         public int OverlayImageIndex = -1;
+        /// <summary>
+        /// Number of rotation frames packed in the cannon overlay. 1 (default)
+        /// = static single image. N (e.g. 40) = an N-frame rotation set
+        /// starting at OverlayImageIndex; the runtime tick maps the bot's
+        /// current rotation 0..39 to a frame and SetImage's the cannon LVZ
+        /// to (OverlayImageIndex + frame). Frame 0 is the barrel-points-north
+        /// orientation; frames advance clockwise around the canvas center.
+        /// </summary>
+        public int OverlayImageRotationCount = 1;
     }
 
     /// <summary>
@@ -300,6 +311,10 @@ public sealed partial class SectorWar : IStaticTurret
 
         /// <summary>LVZ object id (9400..9499) of the cannon overlay. -1 = no overlay.</summary>
         public short CannonLvzId = -1;
+        /// <summary>Last rotation frame (0..N-1) we SetImage'd the cannon LVZ to.
+        /// -1 means "never set". Used to skip redundant SetImage broadcasts when
+        /// the bot's rotation hasn't changed enough to step into a new frame.</summary>
+        public int LastCannonFrame = -1;
     }
 #pragma warning restore CS0649
 
@@ -550,6 +565,8 @@ public sealed partial class SectorWar : IStaticTurret
             // keeps the visible ship sprite. >= 0 hides the ship + draws the
             // configured cannon image at the bot's center.
             tt.OverlayImageIndex = _configManager.GetInt(cfg, section, "OverlayImageIndex", -1);
+            tt.OverlayImageRotationCount = Math.Max(1,
+                _configManager.GetInt(cfg, section, "OverlayImageRotationCount", 1));
 
             // Wave-fix: fall back to SS.NET-conventional [<Ship>] BulletSpeed/
             // BombSpeed for projSpeed lookup so the turret's lead-prediction
@@ -1120,7 +1137,13 @@ public sealed partial class SectorWar : IStaticTurret
                 RemoveBotInternal_StaticTurret(bot);
         }
 
-        _logManager.LogA(LogLevel.Info, LogCategory, arena,
+        // Drivel — every bot kill emits one of these; in heavy combat with
+        // 12+ HQ fakes per freq + warstation defenders, dozens fire per
+        // round. Subscribers (Pylon / StationDeployer / Hq / RoundManager)
+        // re-log at Info on actually-significant kills (capital,
+        // structure-destroyed, etc.) so the channel still carries the
+        // round-shaping events.
+        _logManager.LogA(LogLevel.Drivel, LogCategory, arena,
             $"Turret '{turretKey}' killed at ({x >> 4},{y >> 4}) freq {freq} by {firedBy.Name}.");
 
         BotKilled?.Invoke(arena, turretKey, x, y, freq, firedBy);
@@ -1460,6 +1483,12 @@ public sealed partial class SectorWar : IStaticTurret
 
             RotateBot_StaticTurret(bot);
 
+            // Cannon overlay frame update — for rotation-aware cannons,
+            // SetImage to the frame matching the bot's current rotation.
+            // No-op for static cannons (RotationCount=1) and for bots
+            // without a cannon overlay.
+            UpdateCannonRotationFrame_StaticTurret(bot);
+
             // ASSS WeaponDelay is in 10ms ticks; convert to ms.
             if (target is not null &&
                 (now - bot.LastFire) >= (uint)(tt.WeaponDelay * 10) &&
@@ -1476,6 +1505,41 @@ public sealed partial class SectorWar : IStaticTurret
             bot.LastPositionUpdate = now;
             SendPositionUpdate_StaticTurret(bot, fireWeapon: false);
         }
+    }
+
+    /// <summary>
+    /// For cannon overlays with a rotation set (OverlayImageRotationCount &gt; 1),
+    /// pick the frame matching the bot's current rotation and SetImage if it
+    /// differs from the last broadcast. No-op for static-image cannons and
+    /// bots without an overlay. Called once per AI tick from
+    /// OnTick_StaticTurret after RotateBot_StaticTurret updates the bot's
+    /// smoothed rotation.
+    /// </summary>
+    private void UpdateCannonRotationFrame_StaticTurret(StaticTurretBotData bot)
+    {
+        var tt = bot.TurretType;
+        if (tt.OverlayImageRotationCount <= 1) return;
+        if (tt.OverlayImageIndex < 0) return;
+        if (bot.CannonLvzId < StaticTurretCannonPoolStart) return;
+
+        // Continuum rotation is 0..39 (40 steps). Map to the frame set's
+        // resolution (could be 8, 20, 40, ...). Frame 0 = barrel north,
+        // frames advance clockwise.
+        int rot40 = bot.ARotation / 1000;
+        if (rot40 < 0) rot40 = 0;
+        if (rot40 >= 40) rot40 = 39;
+        int frame = (rot40 * tt.OverlayImageRotationCount) / 40;
+        if (frame < 0) frame = 0;
+        if (frame >= tt.OverlayImageRotationCount) frame = tt.OverlayImageRotationCount - 1;
+        if (frame == bot.LastCannonFrame) return;
+
+        try
+        {
+            _lvzObjects.SetImage(bot.Arena, bot.CannonLvzId,
+                (byte)(tt.OverlayImageIndex + frame));
+            bot.LastCannonFrame = frame;
+        }
+        catch { /* phong's no-crash rule */ }
     }
 
     /// <summary>Step the bot's smoothed rotation toward DesiredRotation. -1 RotationSpeed = instant.</summary>

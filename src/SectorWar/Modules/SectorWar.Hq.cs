@@ -532,8 +532,11 @@ public sealed partial class SectorWar
                     $"HQ capital cannon '{key}' freq {freq} at ({cx},{cy}) failed: {res}.");
             }
         }
+        // Drivel — fires every capital respawn cycle (every ~60s during
+        // heavy assault). Spawn-failure cases above already log at Warn,
+        // so the success line is just a confirmation.
         if (spawned > 0)
-            _logManager.LogA(LogLevel.Info, LogCategory, arena,
+            _logManager.LogA(LogLevel.Drivel, LogCategory, arena,
                 $"HQ capital freq {freq}: {spawned}/{HqCapitalCannonLayout.Length} mounted cannons spawned.");
     }
 

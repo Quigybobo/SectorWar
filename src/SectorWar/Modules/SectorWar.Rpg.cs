@@ -279,7 +279,11 @@ public sealed partial class SectorWar : IEconomy, IRpg
             pd.Credits += boosted;
             newBalance = pd.Credits;
         }
-        _logManager.LogP(LogLevel.Info, "Economy", player,
+        // Drivel — fires on every credit grant including green pickups,
+        // so several per second per active player. Significant credit
+        // events (purchases, round rewards) fire their own descriptive
+        // logs at the call site if needed.
+        _logManager.LogP(LogLevel.Drivel, "Economy", player,
             $"+{boosted} cr ({reason}), balance={newBalance}");
     }
 
@@ -697,7 +701,7 @@ public sealed partial class SectorWar : IEconomy, IRpg
 
         long newBalance;
         lock (pd.Lock) { pd.Credits += amount; newBalance = pd.Credits; }
-        _logManager.LogP(LogLevel.Info, "Economy", player,
+        _logManager.LogP(LogLevel.Drivel, "Economy", player,
             $"+{amount} cr ({reason}), balance={newBalance}");
         return true;
     }
@@ -714,7 +718,7 @@ public sealed partial class SectorWar : IEconomy, IRpg
             pd.Credits -= amount;
             newBalance = pd.Credits;
         }
-        _logManager.LogP(LogLevel.Info, "Economy", player,
+        _logManager.LogP(LogLevel.Drivel, "Economy", player,
             $"-{amount} cr ({reason}), balance={newBalance}");
         return true;
     }

@@ -312,7 +312,10 @@ public sealed partial class SectorWar : IShipSettings
         if (applied > 0)
         {
             _clientSettings.SendClientSettings(player);
-            _logManager.LogP(LogLevel.Info, LogCategory, player,
+            // Drivel — fires on every equip/unequip + on each arena entry,
+            // so noisy during a shopping session. Significant inventory
+            // changes have their own logs at the menu / equip call sites.
+            _logManager.LogP(LogLevel.Drivel, LogCategory, player,
                 $"Refreshed {applied} ship setting overrides ({totalItemsEquipped} items equipped across all ships).");
         }
     }

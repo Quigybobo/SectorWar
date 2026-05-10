@@ -42,3 +42,23 @@ The complete list of every `[SectorWar]` key the plugin reads, with type /
 default / range, lives in [docs/ARENA_SETTINGS.md](../../docs/ARENA_SETTINGS.md).
 That file is the authoritative contract for guardrailing values that admin
 tooling (`?man`, `?quickfix`) exposes to users.
+
+## Recommended global.conf log filter
+
+SectorWar deploys a lot of fake players (HQ defenders + capital + capital
+cannons + warstation turrets + pylons), and SS.NET's `Fake` module logs an
+Info-level line on every create + destroy. Round resets cycle ~24 fakes per
+HQ, which floods the console without filter. Suggested zone-level filter
+in [conf/global.conf](#) (NOT arena-specific):
+
+```ini
+[log_console]
+all = IMWE       ; drop Drivel from console (keep in LogFile if desired)
+Fake = WE        ; silence fake create/destroy Info chatter
+```
+
+Drivel-level diagnostic logs in SectorWar (per-bot kill, per-credit-grant,
+ship-setting refresh, etc.) are intentional — they're available in
+LogFile if `[log_file] all = DIMWE`, but kept off the console so phong's
+ops view stays focused on round-shaping events (HQ destroyed, capital
+killed, structure deployed, etc.).

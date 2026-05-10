@@ -683,7 +683,11 @@ public sealed partial class SectorWar : IStationDeployer
         live--;
         ad.StationDeployerLiveTurretCount[owning] = live;
 
-        _logManager.LogA(LogLevel.Info, LogCategory, arena,
+        // Drivel — fires per-turret-of-structure killed during combat
+        // (potentially 9 lines per warstation kill). The follow-up
+        // "Structure '...' destroyed" line stays at Info because that's
+        // the once-per-structure round-significant event.
+        _logManager.LogA(LogLevel.Drivel, LogCategory, arena,
             $"Structure '{owning.TypeKey}' lost turret '{turretKey}'. Remaining: {live}.");
 
         if (live <= 0)

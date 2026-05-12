@@ -73,6 +73,56 @@ phong wants enforced (and that the parser requires):
 When adding a new turret type: append to the next free `StaticTurretTurretN`
 index, define `[staticturret_<name>]` in the same file, never reuse a name.
 
+## StaticTurretSpawn{N} — auto-spawn format
+
+`[SectorWar] StaticTurretSpawn{N}` auto-spawns a registered turret at arena
+StartGame. Format is **comma-separated** (per the parser at
+[SectorWar.StaticTurret.cs:817](src/SectorWar/Modules/SectorWar.StaticTurret.cs#L817)):
+
+```
+StaticTurretSpawn{N} = <tile-x>, <tile-y>, <freq>, <typeKey>
+```
+
+- `tile-x` / `tile-y` are **tile coords (0..1023)**, not pixels — parser
+  converts to pixel center via `(tile << 4) + 8`.
+- `freq` is in 0..9999.
+- `typeKey` must be one of the registered `StaticTurretTurret{N}` names.
+- Same sequential-from-0 rule as the type list — first empty entry breaks
+  the read loop.
+
+Not pipe-separated, not space-separated. Comma.
+
+## Per-ship floor settings
+
+`ShipSettings` reads only **8 keys** from each `[<Ship>.Floor]` section
+(hardcoded in
+[SectorWar.ShipSettings.cs:94-104](src/SectorWar/Modules/SectorWar.ShipSettings.cs#L94-L104)):
+
+```
+MaximumEnergy, MaximumRecharge, MaximumThrust, MaximumSpeed,
+MaximumRotation, BulletSpeed, BombSpeed, Radius
+```
+
+Anything else in the `.Floor` section is silently ignored. Adding a new
+tracked key requires editing that array AND adding a matching
+`ItemModifier` site in `ItemCatalog` so inventory items can drive it.
+
+## HQ subsystem turret-key bindings
+
+`Hq` calls `IStaticTurret.AddBot` with **specific name strings**, defined
+as `const` in
+[SectorWar.Hq.cs:114-118](src/SectorWar/Modules/SectorWar.Hq.cs#L114-L118):
+
+```
+hq_perimeter_gun, hq_command, hq_capital,
+hq_capital_gun, hq_capital_bomb
+```
+
+These names MUST match `[staticturret_<key>]` section names in
+structures.conf exactly. Renaming a turret type means updating BOTH the
+conf section AND the C# const. There is no tag/category system — just
+literal name lookup.
+
 ## Project shape
 
 - One umbrella `IArenaAttachableModule` (`SectorWar`) split across many

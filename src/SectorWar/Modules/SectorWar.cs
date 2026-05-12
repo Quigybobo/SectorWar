@@ -363,6 +363,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         LoadHq(broker);                  // needs IStaticTurret (loaded above)
         LoadHqHud(broker);               // reads HqArenaState, must load AFTER Hq
         LoadRoundManager(broker);        // hooks into Hq capital-kill path
+        LoadNoFakeScoring(broker);       // zeroes fake stats so F2 leaderboard is clean
         LoadTutorial(broker);            // standalone LVZ-only — no deps
 
         // Async / persist subsystems. Market publishes IMarketReader and
@@ -396,6 +397,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         await UnloadMarketAsync(broker, cancellationToken);
 
         UnloadTutorial(broker);
+        UnloadNoFakeScoring(broker);
         UnloadRoundManager(broker);
         UnloadHqHud(broker);             // unload before Hq (consumer first)
         UnloadHq(broker);                // mirror reverse-load

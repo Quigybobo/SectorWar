@@ -33,6 +33,10 @@ Thumbs.db
 /reference-modules/
 /tools/
 
+# Local-only notes (phong conversation log, design scratch, etc.)
+/phong-rules.md
+/_local/
+
 # Local design + research notes. The two README-linked plugin docs
 # (ARCHITECTURE.md, SECTORWAR_CONF.md) stay tracked.
 /docs/BOMB_VFX_RESEARCH.md

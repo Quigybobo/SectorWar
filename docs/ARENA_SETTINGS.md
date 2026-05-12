@@ -139,7 +139,7 @@ suffix that becomes `[staticturret_<value>]` for type-specific tuning.
 | Key pattern | Type | Default | Min | Max | Nullable | Description | Source |
 |---|---|---|---|---|---|---|---|
 | `StaticTurretTurret{N}` | string | _(empty)_ | — | — | **yes** | Section suffix for turret type N. End-of-list when null. | [SectorWar.StaticTurret.cs:473](../src/SectorWar/Modules/SectorWar.StaticTurret.cs#L473) |
-| `StaticTurretSpawn{N}` | string `typekey\|x\|y\|freq` | _(empty)_ | — | — | **yes** | Auto-spawn entry. Empty / null = end of list. | [SectorWar.StaticTurret.cs:698](../src/SectorWar/Modules/SectorWar.StaticTurret.cs#L698) |
+| `StaticTurretSpawn{N}` | string `tile-x, tile-y, freq, typeKey` | _(empty)_ | — | — | **yes** | Auto-spawn entry, comma-separated. Tile coords 0..1023; parser does `(tile << 4) + 8` to center. `freq` is 0..9999. `typeKey` must match a registered `StaticTurretTurret{N}` name (case-insensitive). Sequential from 0; first empty entry ends the read. Example: `StaticTurretSpawn0 = 444, 555, 1, sentry`. | [SectorWar.StaticTurret.cs:817](../src/SectorWar/Modules/SectorWar.StaticTurret.cs#L817) |
 
 ---
 

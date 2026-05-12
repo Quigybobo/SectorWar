@@ -474,6 +474,7 @@ public sealed partial class SectorWar : IEconomy, IRpg
             foreach (Player p in _playerData.Players)
             {
                 if (p.Status != PlayerState.Playing) continue;
+                if (p.Type == ClientType.Fake) continue;   // skip turret bots / HQ defenders / pylons
                 if (!p.TryGetExtraData(_rpgPdKey, out RpgPlayerData? pd)) continue;
 
                 long credits;

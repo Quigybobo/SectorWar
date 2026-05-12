@@ -1054,6 +1054,7 @@ public sealed partial class SectorWar : IInventory
             foreach (Player p in _playerData.Players)
             {
                 if (p.Status != PlayerState.Playing) continue;
+                if (p.Type == ClientType.Fake) continue;   // hide HQ defenders / capital / pylons / turrets
                 long bal = _inventoryEconomy.GetBalance(p);
                 rows.Add((p.Name ?? "?", bal));
             }

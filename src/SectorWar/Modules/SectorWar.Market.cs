@@ -115,11 +115,6 @@ public sealed partial class SectorWar : IMarketReader
         _serverTimer.SetTimer(_marketTickDelegate, MarketTickIntervalMs,
             MarketTickIntervalMs, this);
 
-        _commandManager.AddCommand(MarketCommand, Command_Market);
-        _commandManager.AddCommand(MarketInvestCommand, Command_MarketInvest);
-        _commandManager.AddCommand(MarketDivestCommand, Command_MarketDivest);
-        _commandManager.AddCommand(MarketPortfolioCommand, Command_MarketPortfolio);
-
         _marketToken = broker.RegisterInterface<IMarketReader>(this);
 
         _logManager.LogM(LogLevel.Info, LogCategory,
@@ -130,11 +125,6 @@ public sealed partial class SectorWar : IMarketReader
     {
         if (_marketToken is not null)
             broker.UnregisterInterface(ref _marketToken);
-
-        _commandManager.RemoveCommand(MarketCommand, Command_Market);
-        _commandManager.RemoveCommand(MarketInvestCommand, Command_MarketInvest);
-        _commandManager.RemoveCommand(MarketDivestCommand, Command_MarketDivest);
-        _commandManager.RemoveCommand(MarketPortfolioCommand, Command_MarketPortfolio);
 
         if (_marketTickDelegate is not null)
         {
@@ -154,8 +144,21 @@ public sealed partial class SectorWar : IMarketReader
         _playerData.FreePlayerData(ref _marketPdKey);
     }
 
-    private void AttachMarket(Arena arena) { /* zone-wide */ }
-    private void DetachMarket(Arena arena) { /* zone-wide */ }
+    private void AttachMarket(Arena arena)
+    {
+        _commandManager.AddCommand(MarketCommand, Command_Market, arena);
+        _commandManager.AddCommand(MarketInvestCommand, Command_MarketInvest, arena);
+        _commandManager.AddCommand(MarketDivestCommand, Command_MarketDivest, arena);
+        _commandManager.AddCommand(MarketPortfolioCommand, Command_MarketPortfolio, arena);
+    }
+
+    private void DetachMarket(Arena arena)
+    {
+        _commandManager.RemoveCommand(MarketCommand, Command_Market, arena);
+        _commandManager.RemoveCommand(MarketInvestCommand, Command_MarketInvest, arena);
+        _commandManager.RemoveCommand(MarketDivestCommand, Command_MarketDivest, arena);
+        _commandManager.RemoveCommand(MarketPortfolioCommand, Command_MarketPortfolio, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IMarketReader IMPLEMENTATION

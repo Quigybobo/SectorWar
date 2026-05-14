@@ -197,11 +197,6 @@ public sealed partial class SectorWar : IStationDeployer
     {
         _stationDeployerBroker = broker;
 
-        _commandManager.AddCommand(StationDeployerDeployCommand, Command_StationDeployerDeploy);
-        _commandManager.AddCommand(StationDeployerDespawnCommand, Command_StationDeployerDespawn);
-        _commandManager.AddCommand(StationDeployerListCommand, Command_StationDeployerList);
-        _commandManager.AddCommand(StationDeployerUpgradeCommand, Command_StationDeployerUpgrade);
-
         _stationDeployerPersist = broker.GetInterface<IPersist>();
         _stationDeployerPersistExecutor = broker.GetInterface<IPersistExecutor>();
         if (_stationDeployerPersist is not null)
@@ -258,16 +253,24 @@ public sealed partial class SectorWar : IStationDeployer
         if (_stationDeployerPersistExecutor is not null)
             broker.ReleaseInterface(ref _stationDeployerPersistExecutor);
 
-        _commandManager.RemoveCommand(StationDeployerDeployCommand, Command_StationDeployerDeploy);
-        _commandManager.RemoveCommand(StationDeployerDespawnCommand, Command_StationDeployerDespawn);
-        _commandManager.RemoveCommand(StationDeployerListCommand, Command_StationDeployerList);
-        _commandManager.RemoveCommand(StationDeployerUpgradeCommand, Command_StationDeployerUpgrade);
-
         _stationDeployerBroker = null;
     }
 
-    private void AttachStationDeployer(Arena arena) { /* arena-attached via callback */ }
-    private void DetachStationDeployer(Arena arena) { /* same */ }
+    private void AttachStationDeployer(Arena arena)
+    {
+        _commandManager.AddCommand(StationDeployerDeployCommand, Command_StationDeployerDeploy, arena);
+        _commandManager.AddCommand(StationDeployerDespawnCommand, Command_StationDeployerDespawn, arena);
+        _commandManager.AddCommand(StationDeployerListCommand, Command_StationDeployerList, arena);
+        _commandManager.AddCommand(StationDeployerUpgradeCommand, Command_StationDeployerUpgrade, arena);
+    }
+
+    private void DetachStationDeployer(Arena arena)
+    {
+        _commandManager.RemoveCommand(StationDeployerDeployCommand, Command_StationDeployerDeploy, arena);
+        _commandManager.RemoveCommand(StationDeployerDespawnCommand, Command_StationDeployerDespawn, arena);
+        _commandManager.RemoveCommand(StationDeployerListCommand, Command_StationDeployerList, arena);
+        _commandManager.RemoveCommand(StationDeployerUpgradeCommand, Command_StationDeployerUpgrade, arena);
+    }
 
     // -------------------------------------------------------------------------
     // CALLBACK

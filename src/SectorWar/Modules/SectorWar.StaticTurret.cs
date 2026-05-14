@@ -602,6 +602,25 @@ public sealed partial class SectorWar : IStaticTurret
         }
 
         ad.StaticTurretInitialized = true;
+
+        // Admin-facing visibility: dump the type registry on every parse pass
+        // (arena Create + ConfChanged) so zone admins can see at a glance what
+        // their `[SectorWar] StaticTurretTurret{N}` keys + `[staticturret_*]`
+        // sections resolved to. If this prints "Loaded 0 turret types" then
+        // the conf isn't being read at all (typical cause: keys live in a
+        // file outside the arena.Cfg inheritance chain).
+        if (ad.StaticTurretTypes.Count == 0)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                "Loaded 0 turret types from [SectorWar] StaticTurretTurret{N} — " +
+                "check that those keys live in this arena's conf chain.");
+        }
+        else
+        {
+            _logManager.LogA(LogLevel.Info, LogCategory, arena,
+                $"Loaded {ad.StaticTurretTypes.Count} turret types: " +
+                string.Join(", ", ad.StaticTurretTypes.Keys));
+        }
     }
 
     // -------------------------------------------------------------------------

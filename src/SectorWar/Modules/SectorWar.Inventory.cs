@@ -554,17 +554,6 @@ public sealed partial class SectorWar : IInventory
                 "Inventory: IPersist not available — backpack and loadouts will not persist across restarts.");
         }
 
-        // 8 chat commands. ?inv and ?inventory share one handler; the rest
-        // map 1:1.
-        _commandManager.AddCommand(InventoryShopCommand, Command_InventoryShop);
-        _commandManager.AddCommand(InventoryShopBuyCommand, Command_InventoryShopBuy);
-        _commandManager.AddCommand(InventoryInvCommand, Command_InventoryInv);
-        _commandManager.AddCommand(InventoryInventoryCommand, Command_InventoryInv);
-        _commandManager.AddCommand(InventoryEquipCommand, Command_InventoryEquip);
-        _commandManager.AddCommand(InventoryUnequipCommand, Command_InventoryUnequip);
-        _commandManager.AddCommand(InventoryShopSellCommand, Command_InventoryShopSell);
-        _commandManager.AddCommand(InventoryMenuCommand, Command_InventoryMenu);
-
         // Publish IInventory so other partials and external modules can read
         // a player's equipped loadout (e.g. ShipSettings reads modifiers from
         // GetEquippedForShip when a player picks a ship).
@@ -594,15 +583,6 @@ public sealed partial class SectorWar : IInventory
         if (_inventoryToken is not null)
             broker.UnregisterInterface(ref _inventoryToken);
 
-        _commandManager.RemoveCommand(InventoryShopCommand, Command_InventoryShop);
-        _commandManager.RemoveCommand(InventoryShopBuyCommand, Command_InventoryShopBuy);
-        _commandManager.RemoveCommand(InventoryInvCommand, Command_InventoryInv);
-        _commandManager.RemoveCommand(InventoryInventoryCommand, Command_InventoryInv);
-        _commandManager.RemoveCommand(InventoryEquipCommand, Command_InventoryEquip);
-        _commandManager.RemoveCommand(InventoryUnequipCommand, Command_InventoryUnequip);
-        _commandManager.RemoveCommand(InventoryShopSellCommand, Command_InventoryShopSell);
-        _commandManager.RemoveCommand(InventoryMenuCommand, Command_InventoryMenu);
-
         if (_inventoryPersist is not null && _inventoryPersistRegistration is not null)
         {
             await _inventoryPersist.UnregisterPersistentDataAsync(_inventoryPersistRegistration);
@@ -623,11 +603,32 @@ public sealed partial class SectorWar : IInventory
         _inventoryBroker = null;
     }
 
-    /// <summary>Per-arena attach is a no-op — Inventory is zone-wide.</summary>
-    private void AttachInventory(Arena arena) { /* zone-wide */ }
+    /// <summary>Per-arena attach: register all 8 shop/inventory commands at
+    /// arena scope so they only surface in arenas where SectorWar is attached.</summary>
+    private void AttachInventory(Arena arena)
+    {
+        _commandManager.AddCommand(InventoryShopCommand, Command_InventoryShop, arena);
+        _commandManager.AddCommand(InventoryShopBuyCommand, Command_InventoryShopBuy, arena);
+        _commandManager.AddCommand(InventoryInvCommand, Command_InventoryInv, arena);
+        _commandManager.AddCommand(InventoryInventoryCommand, Command_InventoryInv, arena);
+        _commandManager.AddCommand(InventoryEquipCommand, Command_InventoryEquip, arena);
+        _commandManager.AddCommand(InventoryUnequipCommand, Command_InventoryUnequip, arena);
+        _commandManager.AddCommand(InventoryShopSellCommand, Command_InventoryShopSell, arena);
+        _commandManager.AddCommand(InventoryMenuCommand, Command_InventoryMenu, arena);
+    }
 
-    /// <summary>Per-arena detach is a no-op — Inventory is zone-wide.</summary>
-    private void DetachInventory(Arena arena) { /* zone-wide */ }
+    /// <summary>Per-arena detach: reverse the AddCommand calls.</summary>
+    private void DetachInventory(Arena arena)
+    {
+        _commandManager.RemoveCommand(InventoryShopCommand, Command_InventoryShop, arena);
+        _commandManager.RemoveCommand(InventoryShopBuyCommand, Command_InventoryShopBuy, arena);
+        _commandManager.RemoveCommand(InventoryInvCommand, Command_InventoryInv, arena);
+        _commandManager.RemoveCommand(InventoryInventoryCommand, Command_InventoryInv, arena);
+        _commandManager.RemoveCommand(InventoryEquipCommand, Command_InventoryEquip, arena);
+        _commandManager.RemoveCommand(InventoryUnequipCommand, Command_InventoryUnequip, arena);
+        _commandManager.RemoveCommand(InventoryShopSellCommand, Command_InventoryShopSell, arena);
+        _commandManager.RemoveCommand(InventoryMenuCommand, Command_InventoryMenu, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IInventory IMPLEMENTATION

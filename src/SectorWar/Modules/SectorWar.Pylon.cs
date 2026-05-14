@@ -304,12 +304,6 @@ public sealed partial class SectorWar : IPylon
     {
         _pylonBroker = broker;
 
-        _commandManager.AddCommand(PylonDeployCommand, Command_PylonDeploy);
-        _commandManager.AddCommand(PylonDespawnCommand, Command_PylonDespawn);
-        _commandManager.AddCommand(PylonListCommand, Command_PylonList);
-        _commandManager.AddCommand(PylonUpgradeCommand, Command_PylonUpgrade);
-        _commandManager.AddCommand(PylonWipeArenaCommand, Command_PylonWipeArena);
-
         // Arena-scoped persistence. SetData fires when an arena is being
         // CREATED — we deserialize into ArenaData.PylonPendingRestore. The
         // actual re-deploy (which depends on IStaticTurret being attached)
@@ -398,12 +392,6 @@ public sealed partial class SectorWar : IPylon
         if (_pylonPersistExecutor is not null)
             broker.ReleaseInterface(ref _pylonPersistExecutor);
 
-        _commandManager.RemoveCommand(PylonDeployCommand, Command_PylonDeploy);
-        _commandManager.RemoveCommand(PylonDespawnCommand, Command_PylonDespawn);
-        _commandManager.RemoveCommand(PylonListCommand, Command_PylonList);
-        _commandManager.RemoveCommand(PylonUpgradeCommand, Command_PylonUpgrade);
-        _commandManager.RemoveCommand(PylonWipeArenaCommand, Command_PylonWipeArena);
-
         _pylonBroker = null;
     }
 
@@ -416,8 +404,23 @@ public sealed partial class SectorWar : IPylon
     // symmetric and to give future per-arena-only init a single place to land.
     // -------------------------------------------------------------------------
 
-    private void AttachPylon(Arena arena) { /* arena state driven via ArenaActionCallback */ }
-    private void DetachPylon(Arena arena) { /* same */ }
+    private void AttachPylon(Arena arena)
+    {
+        _commandManager.AddCommand(PylonDeployCommand, Command_PylonDeploy, arena);
+        _commandManager.AddCommand(PylonDespawnCommand, Command_PylonDespawn, arena);
+        _commandManager.AddCommand(PylonListCommand, Command_PylonList, arena);
+        _commandManager.AddCommand(PylonUpgradeCommand, Command_PylonUpgrade, arena);
+        _commandManager.AddCommand(PylonWipeArenaCommand, Command_PylonWipeArena, arena);
+    }
+
+    private void DetachPylon(Arena arena)
+    {
+        _commandManager.RemoveCommand(PylonDeployCommand, Command_PylonDeploy, arena);
+        _commandManager.RemoveCommand(PylonDespawnCommand, Command_PylonDespawn, arena);
+        _commandManager.RemoveCommand(PylonListCommand, Command_PylonList, arena);
+        _commandManager.RemoveCommand(PylonUpgradeCommand, Command_PylonUpgrade, arena);
+        _commandManager.RemoveCommand(PylonWipeArenaCommand, Command_PylonWipeArena, arena);
+    }
 
     // -------------------------------------------------------------------------
     // ARENA ACTION CALLBACK

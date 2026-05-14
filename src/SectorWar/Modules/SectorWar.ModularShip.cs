@@ -126,9 +126,6 @@ public sealed partial class SectorWar
     {
         _modularShipBroker = broker;
 
-        _commandManager.AddCommand(ModularShipBuildCommand, Command_ModularShipBuild);
-        _commandManager.AddCommand(ModularShipClearCommand, Command_ModularShipClear);
-
         PlayerActionCallback.Register(broker, OnPlayerAction_ModularShip);
         ShipFreqChangeCallback.Register(broker, OnShipFreqChange_ModularShip);
         PlayerPositionPacketCallback.Register(broker, OnPlayerPosition_ModularShip);
@@ -142,9 +139,6 @@ public sealed partial class SectorWar
 
     private void UnloadModularShip(IComponentBroker broker)
     {
-        _commandManager.RemoveCommand(ModularShipBuildCommand, Command_ModularShipBuild);
-        _commandManager.RemoveCommand(ModularShipClearCommand, Command_ModularShipClear);
-
         _mainloopTimer.ClearTimer(OnTick_ModularShip, this);
 
         PlayerActionCallback.Unregister(broker, OnPlayerAction_ModularShip);
@@ -169,8 +163,17 @@ public sealed partial class SectorWar
         _modularShipBroker = null;
     }
 
-    private void AttachModularShip(Arena arena) { /* zone-wide pool */ }
-    private void DetachModularShip(Arena arena) { /* zone-wide pool */ }
+    private void AttachModularShip(Arena arena)
+    {
+        _commandManager.AddCommand(ModularShipBuildCommand, Command_ModularShipBuild, arena);
+        _commandManager.AddCommand(ModularShipClearCommand, Command_ModularShipClear, arena);
+    }
+
+    private void DetachModularShip(Arena arena)
+    {
+        _commandManager.RemoveCommand(ModularShipBuildCommand, Command_ModularShipBuild, arena);
+        _commandManager.RemoveCommand(ModularShipClearCommand, Command_ModularShipClear, arena);
+    }
 
     // -------------------------------------------------------------------------
     // COMMANDS

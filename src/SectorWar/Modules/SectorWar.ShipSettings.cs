@@ -142,7 +142,6 @@ public sealed partial class SectorWar : IShipSettings
         ResolveShipSettingsIdentifiers();
 
         PlayerActionCallback.Register(broker, OnPlayerAction_ShipSettings);
-        _commandManager.AddCommand(ShipSettingsFloorCommand, Command_ShipSettingsFloor);
 
         _shipSettingsToken = broker.RegisterInterface<IShipSettings>(this);
 
@@ -155,17 +154,23 @@ public sealed partial class SectorWar : IShipSettings
         if (_shipSettingsToken is not null)
             broker.UnregisterInterface(ref _shipSettingsToken);
 
-        _commandManager.RemoveCommand(ShipSettingsFloorCommand, Command_ShipSettingsFloor);
         PlayerActionCallback.Unregister(broker, OnPlayerAction_ShipSettings);
         _shipSettingsBroker = null;
     }
 
     // -------------------------------------------------------------------------
-    // PER-ARENA ATTACH / DETACH (no-ops — zone-wide)
+    // PER-ARENA ATTACH / DETACH — arena-scoped command registration
     // -------------------------------------------------------------------------
 
-    private void AttachShipSettings(Arena arena) { /* zone-wide */ }
-    private void DetachShipSettings(Arena arena) { /* zone-wide */ }
+    private void AttachShipSettings(Arena arena)
+    {
+        _commandManager.AddCommand(ShipSettingsFloorCommand, Command_ShipSettingsFloor, arena);
+    }
+
+    private void DetachShipSettings(Arena arena)
+    {
+        _commandManager.RemoveCommand(ShipSettingsFloorCommand, Command_ShipSettingsFloor, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IShipSettings IMPLEMENTATION

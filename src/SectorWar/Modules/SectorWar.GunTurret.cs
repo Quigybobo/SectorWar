@@ -161,11 +161,6 @@ public sealed partial class SectorWar : IGunTurret
         KillCallback.Register(broker, OnKill_GunTurret);
         NewPlayerCallback.Register(broker, OnNewPlayer_GunTurret);
 
-        _commandManager.AddCommand(GunTurretResetTurretsCommand, Command_GunTurretReset);
-        _commandManager.AddCommand(GunTurretAddTurretCommand, Command_GunTurretAdd);
-        _commandManager.AddCommand(GunTurretClearTurretsCommand, Command_GunTurretClear);
-        _commandManager.AddCommand(GunTurretListTurretsCommand, Command_GunTurretList);
-
         _mainloopTimer.SetTimer(OnTick_GunTurret, GunTurretTimerCadenceMs,
             GunTurretTimerCadenceMs, this);
 
@@ -180,11 +175,6 @@ public sealed partial class SectorWar : IGunTurret
             broker.UnregisterInterface(ref _gunTurretToken);
 
         _mainloopTimer.ClearTimer(OnTick_GunTurret, this);
-
-        _commandManager.RemoveCommand(GunTurretResetTurretsCommand, Command_GunTurretReset);
-        _commandManager.RemoveCommand(GunTurretAddTurretCommand, Command_GunTurretAdd);
-        _commandManager.RemoveCommand(GunTurretClearTurretsCommand, Command_GunTurretClear);
-        _commandManager.RemoveCommand(GunTurretListTurretsCommand, Command_GunTurretList);
 
         PlayerActionCallback.Unregister(broker, OnPlayerAction_GunTurret);
         ShipFreqChangeCallback.Unregister(broker, OnShipFreqChange_GunTurret);
@@ -206,6 +196,11 @@ public sealed partial class SectorWar : IGunTurret
 
     private void AttachGunTurret(Arena arena)
     {
+        _commandManager.AddCommand(GunTurretResetTurretsCommand, Command_GunTurretReset, arena);
+        _commandManager.AddCommand(GunTurretAddTurretCommand, Command_GunTurretAdd, arena);
+        _commandManager.AddCommand(GunTurretClearTurretsCommand, Command_GunTurretClear, arena);
+        _commandManager.AddCommand(GunTurretListTurretsCommand, Command_GunTurretList, arena);
+
         // Cache the auto-fire conf values from this arena's [SectorWar]
         // section. GunTurret state itself is zone-wide; the cache is read
         // by the auto-fire tick. Last-attached arena's values win in a
@@ -221,7 +216,14 @@ public sealed partial class SectorWar : IGunTurret
         _gunTurretAnchorPriorityWindowMs = Math.Max(0,
             _configManager.GetInt(cfg, ConfSection, "GunTurretAnchorPriorityWindowMs", 500));
     }
-    private void DetachGunTurret(Arena arena) { /* zone-wide */ }
+
+    private void DetachGunTurret(Arena arena)
+    {
+        _commandManager.RemoveCommand(GunTurretResetTurretsCommand, Command_GunTurretReset, arena);
+        _commandManager.RemoveCommand(GunTurretAddTurretCommand, Command_GunTurretAdd, arena);
+        _commandManager.RemoveCommand(GunTurretClearTurretsCommand, Command_GunTurretClear, arena);
+        _commandManager.RemoveCommand(GunTurretListTurretsCommand, Command_GunTurretList, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IGunTurret IMPLEMENTATION

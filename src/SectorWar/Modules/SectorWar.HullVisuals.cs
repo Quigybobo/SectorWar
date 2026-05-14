@@ -139,9 +139,6 @@ public sealed partial class SectorWar
     /// overlay (lifecycle, ship-change-to-spec, position packet).</summary>
     private void LoadHullVisuals(IComponentBroker broker)
     {
-        _commandManager.AddCommand(HullVisualsCapitalOnCommand, Command_HullVisualsCapitalOn);
-        _commandManager.AddCommand(HullVisualsCapitalOffCommand, Command_HullVisualsCapitalOff);
-
         PlayerActionCallback.Register(broker, OnPlayerAction_HullVisuals);
         ShipFreqChangeCallback.Register(broker, OnShipFreqChange_HullVisuals);
         PlayerPositionPacketCallback.Register(broker, OnPlayerPosition_HullVisuals);
@@ -154,9 +151,6 @@ public sealed partial class SectorWar
     /// no zombie sprites linger if the umbrella is hot-reloaded.</summary>
     private void UnloadHullVisuals(IComponentBroker broker)
     {
-        _commandManager.RemoveCommand(HullVisualsCapitalOnCommand, Command_HullVisualsCapitalOn);
-        _commandManager.RemoveCommand(HullVisualsCapitalOffCommand, Command_HullVisualsCapitalOff);
-
         PlayerActionCallback.Unregister(broker, OnPlayerAction_HullVisuals);
         ShipFreqChangeCallback.Unregister(broker, OnShipFreqChange_HullVisuals);
         PlayerPositionPacketCallback.Unregister(broker, OnPlayerPosition_HullVisuals);
@@ -188,8 +182,17 @@ public sealed partial class SectorWar
     // PER-ARENA ATTACH / DETACH (no-ops — zone-wide pool)
     // -------------------------------------------------------------------------
 
-    private void AttachHullVisuals(Arena arena) { /* zone-wide */ }
-    private void DetachHullVisuals(Arena arena) { /* zone-wide */ }
+    private void AttachHullVisuals(Arena arena)
+    {
+        _commandManager.AddCommand(HullVisualsCapitalOnCommand, Command_HullVisualsCapitalOn, arena);
+        _commandManager.AddCommand(HullVisualsCapitalOffCommand, Command_HullVisualsCapitalOff, arena);
+    }
+
+    private void DetachHullVisuals(Arena arena)
+    {
+        _commandManager.RemoveCommand(HullVisualsCapitalOnCommand, Command_HullVisualsCapitalOn, arena);
+        _commandManager.RemoveCommand(HullVisualsCapitalOffCommand, Command_HullVisualsCapitalOff, arena);
+    }
 
     // -------------------------------------------------------------------------
     // COMMANDS

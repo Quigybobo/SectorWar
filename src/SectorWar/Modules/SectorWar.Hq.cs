@@ -474,7 +474,8 @@ public sealed partial class SectorWar
             else
             {
                 _logManager.LogA(LogLevel.Warn, LogCategory, arena,
-                    $"HQ defender '{slot.TurretKey}' freq {def.Freq} at ({sx},{sy}) failed: {res}.");
+                    $"HQ defender '{slot.TurretKey}' freq {def.Freq} at ({sx},{sy}) failed: {res}. " +
+                    $"(check the 'Loaded N turret types' line above to see what's registered.)");
             }
         }
         return spawned;

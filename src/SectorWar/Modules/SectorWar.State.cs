@@ -158,7 +158,6 @@ public sealed partial class SectorWar : ISectorWar
         }
 
         ArenaActionCallback.Register(broker, OnArenaAction_SectorWarState);
-        _commandManager.AddCommand(SectorWarStateStatusCommand, Command_SectorWarStateStatus);
 
         // Eager-cache ISectorClaim. The hot-path EvaluateGate falls back to a
         // lazy resolve if this is null, but caching here saves the per-packet
@@ -177,7 +176,6 @@ public sealed partial class SectorWar : ISectorWar
         if (_sectorWarStateToken is not null)
             broker.UnregisterInterface(ref _sectorWarStateToken);
 
-        _commandManager.RemoveCommand(SectorWarStateStatusCommand, Command_SectorWarStateStatus);
         ArenaActionCallback.Unregister(broker, OnArenaAction_SectorWarState);
 
         if (_sectorWarStateClaim is not null)
@@ -191,8 +189,15 @@ public sealed partial class SectorWar : ISectorWar
     // PER-ARENA ATTACH / DETACH (no-ops — zone-wide subsystem)
     // -------------------------------------------------------------------------
 
-    private void AttachSectorWarState(Arena arena) { /* zone-wide */ }
-    private void DetachSectorWarState(Arena arena) { /* zone-wide */ }
+    private void AttachSectorWarState(Arena arena)
+    {
+        _commandManager.AddCommand(SectorWarStateStatusCommand, Command_SectorWarStateStatus, arena);
+    }
+
+    private void DetachSectorWarState(Arena arena)
+    {
+        _commandManager.RemoveCommand(SectorWarStateStatusCommand, Command_SectorWarStateStatus, arena);
+    }
 
     // -------------------------------------------------------------------------
     // CONF READ

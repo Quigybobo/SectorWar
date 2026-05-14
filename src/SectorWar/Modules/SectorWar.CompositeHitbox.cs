@@ -119,10 +119,6 @@ public sealed partial class SectorWar : ICompositeHitbox
     {
         _compositeHitboxBroker = broker;
 
-        _commandManager.AddCommand(CompositeHitboxTestCommand, Command_CompositeHitboxTest);
-        _commandManager.AddCommand(CompositeHitboxStatusCommand, Command_CompositeHitboxStatus);
-        _commandManager.AddCommand(CompositeHitboxClearCommand, Command_CompositeHitboxClear);
-
         PlayerActionCallback.Register(broker, OnPlayerAction_CompositeHitbox);
         ShipFreqChangeCallback.Register(broker, OnShipFreqChange_CompositeHitbox);
 
@@ -140,10 +136,6 @@ public sealed partial class SectorWar : ICompositeHitbox
         if (_compositeHitboxToken is not null)
             broker.UnregisterInterface(ref _compositeHitboxToken);
 
-        _commandManager.RemoveCommand(CompositeHitboxTestCommand, Command_CompositeHitboxTest);
-        _commandManager.RemoveCommand(CompositeHitboxStatusCommand, Command_CompositeHitboxStatus);
-        _commandManager.RemoveCommand(CompositeHitboxClearCommand, Command_CompositeHitboxClear);
-
         _mainloopTimer.ClearTimer(OnTick_CompositeHitbox, this);
 
         PlayerActionCallback.Unregister(broker, OnPlayerAction_CompositeHitbox);
@@ -160,8 +152,19 @@ public sealed partial class SectorWar : ICompositeHitbox
         _compositeHitboxBroker = null;
     }
 
-    private void AttachCompositeHitbox(Arena arena) { /* zone-wide */ }
-    private void DetachCompositeHitbox(Arena arena) { /* zone-wide */ }
+    private void AttachCompositeHitbox(Arena arena)
+    {
+        _commandManager.AddCommand(CompositeHitboxTestCommand, Command_CompositeHitboxTest, arena);
+        _commandManager.AddCommand(CompositeHitboxStatusCommand, Command_CompositeHitboxStatus, arena);
+        _commandManager.AddCommand(CompositeHitboxClearCommand, Command_CompositeHitboxClear, arena);
+    }
+
+    private void DetachCompositeHitbox(Arena arena)
+    {
+        _commandManager.RemoveCommand(CompositeHitboxTestCommand, Command_CompositeHitboxTest, arena);
+        _commandManager.RemoveCommand(CompositeHitboxStatusCommand, Command_CompositeHitboxStatus, arena);
+        _commandManager.RemoveCommand(CompositeHitboxClearCommand, Command_CompositeHitboxClear, arena);
+    }
 
     // -------------------------------------------------------------------------
     // COMMANDS

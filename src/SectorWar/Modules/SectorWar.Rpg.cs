@@ -183,18 +183,6 @@ public sealed partial class SectorWar : IEconomy, IRpg
         KillCallback.Register(broker, OnKill_Rpg);
         GreenCallback.Register(broker, OnGreen_Rpg);
 
-        _commandManager.AddCommand(RpgSectorWarCommand, Command_RpgSectorWar);
-        _commandManager.AddCommand(RpgLevelCommand, Command_RpgLevel);
-        _commandManager.AddCommand(RpgXpCommand, Command_RpgXp);
-        _commandManager.AddCommand(RpgShipInfoCommand, Command_RpgShipInfo);
-        _commandManager.AddCommand(RpgBalCommand, Command_RpgBal);
-        _commandManager.AddCommand(RpgBalanceCommand, Command_RpgBal);
-        _commandManager.AddCommand(RpgPayCommand, Command_RpgPay);
-        _commandManager.AddCommand(RpgBalTopCommand, Command_RpgBalTop);
-        _commandManager.AddCommand(RpgTopCommand, Command_RpgBalTop);
-        _commandManager.AddCommand(RpgPrestigeCommand, Command_RpgPrestige);
-        _commandManager.AddCommand(RpgGiveCommand, Command_RpgGive);
-
         _rpgEconomyToken = broker.RegisterInterface<IEconomy>(this);
         _rpgToken = broker.RegisterInterface<IRpg>(this);
 
@@ -205,18 +193,6 @@ public sealed partial class SectorWar : IEconomy, IRpg
     {
         if (_rpgToken is not null) broker.UnregisterInterface(ref _rpgToken);
         if (_rpgEconomyToken is not null) broker.UnregisterInterface(ref _rpgEconomyToken);
-
-        _commandManager.RemoveCommand(RpgSectorWarCommand, Command_RpgSectorWar);
-        _commandManager.RemoveCommand(RpgLevelCommand, Command_RpgLevel);
-        _commandManager.RemoveCommand(RpgXpCommand, Command_RpgXp);
-        _commandManager.RemoveCommand(RpgShipInfoCommand, Command_RpgShipInfo);
-        _commandManager.RemoveCommand(RpgBalCommand, Command_RpgBal);
-        _commandManager.RemoveCommand(RpgBalanceCommand, Command_RpgBal);
-        _commandManager.RemoveCommand(RpgPayCommand, Command_RpgPay);
-        _commandManager.RemoveCommand(RpgBalTopCommand, Command_RpgBalTop);
-        _commandManager.RemoveCommand(RpgTopCommand, Command_RpgBalTop);
-        _commandManager.RemoveCommand(RpgPrestigeCommand, Command_RpgPrestige);
-        _commandManager.RemoveCommand(RpgGiveCommand, Command_RpgGive);
 
         KillCallback.Unregister(broker, OnKill_Rpg);
         GreenCallback.Unregister(broker, OnGreen_Rpg);
@@ -231,8 +207,35 @@ public sealed partial class SectorWar : IEconomy, IRpg
         _playerData.FreePlayerData(ref _rpgPdKey);
     }
 
-    private void AttachRpg(Arena arena) { /* zone-wide */ }
-    private void DetachRpg(Arena arena) { /* zone-wide */ }
+    private void AttachRpg(Arena arena)
+    {
+        _commandManager.AddCommand(RpgSectorWarCommand, Command_RpgSectorWar, arena);
+        _commandManager.AddCommand(RpgLevelCommand, Command_RpgLevel, arena);
+        _commandManager.AddCommand(RpgXpCommand, Command_RpgXp, arena);
+        _commandManager.AddCommand(RpgShipInfoCommand, Command_RpgShipInfo, arena);
+        _commandManager.AddCommand(RpgBalCommand, Command_RpgBal, arena);
+        _commandManager.AddCommand(RpgBalanceCommand, Command_RpgBal, arena);
+        _commandManager.AddCommand(RpgPayCommand, Command_RpgPay, arena);
+        _commandManager.AddCommand(RpgBalTopCommand, Command_RpgBalTop, arena);
+        _commandManager.AddCommand(RpgTopCommand, Command_RpgBalTop, arena);
+        _commandManager.AddCommand(RpgPrestigeCommand, Command_RpgPrestige, arena);
+        _commandManager.AddCommand(RpgGiveCommand, Command_RpgGive, arena);
+    }
+
+    private void DetachRpg(Arena arena)
+    {
+        _commandManager.RemoveCommand(RpgSectorWarCommand, Command_RpgSectorWar, arena);
+        _commandManager.RemoveCommand(RpgLevelCommand, Command_RpgLevel, arena);
+        _commandManager.RemoveCommand(RpgXpCommand, Command_RpgXp, arena);
+        _commandManager.RemoveCommand(RpgShipInfoCommand, Command_RpgShipInfo, arena);
+        _commandManager.RemoveCommand(RpgBalCommand, Command_RpgBal, arena);
+        _commandManager.RemoveCommand(RpgBalanceCommand, Command_RpgBal, arena);
+        _commandManager.RemoveCommand(RpgPayCommand, Command_RpgPay, arena);
+        _commandManager.RemoveCommand(RpgBalTopCommand, Command_RpgBalTop, arena);
+        _commandManager.RemoveCommand(RpgTopCommand, Command_RpgBalTop, arena);
+        _commandManager.RemoveCommand(RpgPrestigeCommand, Command_RpgPrestige, arena);
+        _commandManager.RemoveCommand(RpgGiveCommand, Command_RpgGive, arena);
+    }
 
     // -------------------------------------------------------------------------
     // CALLBACKS

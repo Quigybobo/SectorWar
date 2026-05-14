@@ -82,30 +82,35 @@ public sealed partial class SectorWar
     private void LoadDevCommands(IComponentBroker broker)
     {
         _devCommandsBroker = broker;
-        _commandManager.AddCommand(DevCommandsSetTestCommand, Command_DevCommandsSetTest);
-        _commandManager.AddCommand(DevCommandsSetShowCommand, Command_DevCommandsSetShow);
-        _commandManager.AddCommand(DevCommandsSetResetCommand, Command_DevCommandsSetReset);
-        _commandManager.AddCommand(DevCommandsLvzTestCommand, Command_DevCommandsLvzTest);
-        _commandManager.AddCommand(DevCommandsDamTestCommand, Command_DevCommandsDamTest);
-        _commandManager.AddCommand(DevCommandsDamClearCommand, Command_DevCommandsDamClear);
-        _commandManager.AddCommand(DevCommandsSetShipCommand, Command_DevCommandsSetShip);
         _logManager.LogM(LogLevel.Info, LogCategory, "DevCommands subsystem loaded.");
     }
 
     private void UnloadDevCommands(IComponentBroker broker)
     {
-        _commandManager.RemoveCommand(DevCommandsSetTestCommand, Command_DevCommandsSetTest);
-        _commandManager.RemoveCommand(DevCommandsSetShowCommand, Command_DevCommandsSetShow);
-        _commandManager.RemoveCommand(DevCommandsSetResetCommand, Command_DevCommandsSetReset);
-        _commandManager.RemoveCommand(DevCommandsLvzTestCommand, Command_DevCommandsLvzTest);
-        _commandManager.RemoveCommand(DevCommandsDamTestCommand, Command_DevCommandsDamTest);
-        _commandManager.RemoveCommand(DevCommandsDamClearCommand, Command_DevCommandsDamClear);
-        _commandManager.RemoveCommand(DevCommandsSetShipCommand, Command_DevCommandsSetShip);
         _devCommandsBroker = null;
     }
 
-    private void AttachDevCommands(Arena arena) { /* zone-wide */ }
-    private void DetachDevCommands(Arena arena) { /* zone-wide */ }
+    private void AttachDevCommands(Arena arena)
+    {
+        _commandManager.AddCommand(DevCommandsSetTestCommand, Command_DevCommandsSetTest, arena);
+        _commandManager.AddCommand(DevCommandsSetShowCommand, Command_DevCommandsSetShow, arena);
+        _commandManager.AddCommand(DevCommandsSetResetCommand, Command_DevCommandsSetReset, arena);
+        _commandManager.AddCommand(DevCommandsLvzTestCommand, Command_DevCommandsLvzTest, arena);
+        _commandManager.AddCommand(DevCommandsDamTestCommand, Command_DevCommandsDamTest, arena);
+        _commandManager.AddCommand(DevCommandsDamClearCommand, Command_DevCommandsDamClear, arena);
+        _commandManager.AddCommand(DevCommandsSetShipCommand, Command_DevCommandsSetShip, arena);
+    }
+
+    private void DetachDevCommands(Arena arena)
+    {
+        _commandManager.RemoveCommand(DevCommandsSetTestCommand, Command_DevCommandsSetTest, arena);
+        _commandManager.RemoveCommand(DevCommandsSetShowCommand, Command_DevCommandsSetShow, arena);
+        _commandManager.RemoveCommand(DevCommandsSetResetCommand, Command_DevCommandsSetReset, arena);
+        _commandManager.RemoveCommand(DevCommandsLvzTestCommand, Command_DevCommandsLvzTest, arena);
+        _commandManager.RemoveCommand(DevCommandsDamTestCommand, Command_DevCommandsDamTest, arena);
+        _commandManager.RemoveCommand(DevCommandsDamClearCommand, Command_DevCommandsDamClear, arena);
+        _commandManager.RemoveCommand(DevCommandsSetShipCommand, Command_DevCommandsSetShip, arena);
+    }
 
     // -------------------------------------------------------------------------
     // ?settest — per-player setting override

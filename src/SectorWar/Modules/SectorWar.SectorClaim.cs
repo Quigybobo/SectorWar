@@ -127,8 +127,6 @@ public sealed partial class SectorWar : ISectorClaim
             _sectorClaimPylon.PylonDespawned += OnPylonDespawned_SectorClaim;
         }
 
-        _commandManager.AddCommand(SectorClaimCommand, Command_SectorClaim);
-        _commandManager.AddCommand(SectorClaimAllCommand, Command_SectorClaimAll);
         _sectorClaimToken = broker.RegisterInterface<ISectorClaim>(this);
 
         _logManager.LogM(LogLevel.Info, LogCategory, "SectorClaim subsystem loaded.");
@@ -149,9 +147,6 @@ public sealed partial class SectorWar : ISectorClaim
             broker.ReleaseInterface(ref _sectorClaimPylon);
         }
 
-        _commandManager.RemoveCommand(SectorClaimCommand, Command_SectorClaim);
-        _commandManager.RemoveCommand(SectorClaimAllCommand, Command_SectorClaimAll);
-
         lock (_sectorClaimLock)
         {
             _sectorClaimClaims.Clear();
@@ -163,8 +158,17 @@ public sealed partial class SectorWar : ISectorClaim
     // PER-ARENA ATTACH / DETACH (no-ops — zone-wide subsystem)
     // -------------------------------------------------------------------------
 
-    private void AttachSectorClaim(Arena arena) { /* zone-wide */ }
-    private void DetachSectorClaim(Arena arena) { /* zone-wide */ }
+    private void AttachSectorClaim(Arena arena)
+    {
+        _commandManager.AddCommand(SectorClaimCommand, Command_SectorClaim, arena);
+        _commandManager.AddCommand(SectorClaimAllCommand, Command_SectorClaimAll, arena);
+    }
+
+    private void DetachSectorClaim(Arena arena)
+    {
+        _commandManager.RemoveCommand(SectorClaimCommand, Command_SectorClaim, arena);
+        _commandManager.RemoveCommand(SectorClaimAllCommand, Command_SectorClaimAll, arena);
+    }
 
     // -------------------------------------------------------------------------
     // PYLON EVENT HANDLERS

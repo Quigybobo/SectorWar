@@ -118,32 +118,34 @@ public sealed partial class SectorWar
     {
         _motdPdKey = _playerData.AllocatePlayerData<MotdPlayerData>();
         PlayerActionCallback.Register(broker, OnPlayerAction_Motd);
-        _commandManager.AddCommand(MotdCommand, Command_Motd);
-        _commandManager.AddCommand(SetMotdCommand, Command_SetMotd);
-        _commandManager.AddCommand(AddMotdCommand, Command_AddMotd);
         _logManager.LogM(LogLevel.Info, LogCategory, "Motd subsystem loaded.");
     }
 
-    /// <summary>Reverse of Load. Symmetric command + callback removal so a
-    /// hot-reload doesn't leak handlers into the next instance.</summary>
+    /// <summary>Reverse of Load. Symmetric callback removal so a hot-reload
+    /// doesn't leak handlers into the next instance.</summary>
     private void UnloadMotd(IComponentBroker broker)
     {
-        _commandManager.RemoveCommand(MotdCommand, Command_Motd);
-        _commandManager.RemoveCommand(SetMotdCommand, Command_SetMotd);
-        _commandManager.RemoveCommand(AddMotdCommand, Command_AddMotd);
         PlayerActionCallback.Unregister(broker, OnPlayerAction_Motd);
         _playerData.FreePlayerData(ref _motdPdKey);
     }
 
     // -------------------------------------------------------------------------
-    // PER-ARENA ATTACH / DETACH
-    //
-    // Motd is zone-wide, not arena-scoped. Attach/Detach are no-ops; included
-    // for symmetry with the umbrella's lifecycle pattern.
+    // PER-ARENA ATTACH / DETACH — arena-scoped command registration
     // -------------------------------------------------------------------------
 
-    private void AttachMotd(Arena arena) { /* zone-wide, no per-arena work */ }
-    private void DetachMotd(Arena arena) { /* zone-wide, no per-arena work */ }
+    private void AttachMotd(Arena arena)
+    {
+        _commandManager.AddCommand(MotdCommand, Command_Motd, arena);
+        _commandManager.AddCommand(SetMotdCommand, Command_SetMotd, arena);
+        _commandManager.AddCommand(AddMotdCommand, Command_AddMotd, arena);
+    }
+
+    private void DetachMotd(Arena arena)
+    {
+        _commandManager.RemoveCommand(MotdCommand, Command_Motd, arena);
+        _commandManager.RemoveCommand(SetMotdCommand, Command_SetMotd, arena);
+        _commandManager.RemoveCommand(AddMotdCommand, Command_AddMotd, arena);
+    }
 
     // -------------------------------------------------------------------------
     // CALLBACK

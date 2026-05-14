@@ -123,10 +123,6 @@ public sealed partial class SectorWar : IDeployableShop
     private void LoadDeployableShop(IComponentBroker broker)
     {
         _deployableShopBroker = broker;
-        _commandManager.AddCommand(DeployableShopBuyPylonCommand, Command_DeployableShopBuyPylon);
-        _commandManager.AddCommand(DeployableShopBuyOutpostCommand, Command_DeployableShopBuyOutpost);
-        _commandManager.AddCommand(DeployableShopBuyWarStationCommand, Command_DeployableShopBuyWarStation);
-        _commandManager.AddCommand(DeployableShopShopCommand, Command_DeployableShopShop);
         _deployableShopToken = broker.RegisterInterface<IDeployableShop>(this);
         _logManager.LogM(LogLevel.Info, LogCategory, "DeployableShop subsystem loaded.");
     }
@@ -135,29 +131,32 @@ public sealed partial class SectorWar : IDeployableShop
     {
         if (_deployableShopToken is not null)
             broker.UnregisterInterface(ref _deployableShopToken);
-        _commandManager.RemoveCommand(DeployableShopBuyPylonCommand, Command_DeployableShopBuyPylon);
-        _commandManager.RemoveCommand(DeployableShopBuyOutpostCommand, Command_DeployableShopBuyOutpost);
-        _commandManager.RemoveCommand(DeployableShopBuyWarStationCommand, Command_DeployableShopBuyWarStation);
-        _commandManager.RemoveCommand(DeployableShopShopCommand, Command_DeployableShopShop);
         _deployableShopBroker = null;
     }
 
     // -------------------------------------------------------------------------
-    // PER-ARENA ATTACH / DETACH
+    // PER-ARENA ATTACH / DETACH — arena-scoped command registration
     //
-    // The legacy buy* commands are zone-wide (registered in Load). The unified
-    // "?buy <kind>" dispatcher is arena-scoped because SS.Core.Modules.Buy
-    // also registers "?buy" arena-scoped — coexistence requires our handler
-    // to only bind in arenas SectorWar attaches to.
+    // Every command lives at arena scope so it only shows up in arenas where
+    // SectorWar is attached. The "?buy <kind>" dispatcher coexists with
+    // SS.Core.Modules.Buy's own "?buy" handler — both are arena-scoped.
     // -------------------------------------------------------------------------
 
     private void AttachDeployableShop(Arena arena)
     {
+        _commandManager.AddCommand(DeployableShopBuyPylonCommand, Command_DeployableShopBuyPylon, arena);
+        _commandManager.AddCommand(DeployableShopBuyOutpostCommand, Command_DeployableShopBuyOutpost, arena);
+        _commandManager.AddCommand(DeployableShopBuyWarStationCommand, Command_DeployableShopBuyWarStation, arena);
+        _commandManager.AddCommand(DeployableShopShopCommand, Command_DeployableShopShop, arena);
         _commandManager.AddCommand(DeployableShopBuyCommand, Command_DeployableShopBuy, arena);
     }
 
     private void DetachDeployableShop(Arena arena)
     {
+        _commandManager.RemoveCommand(DeployableShopBuyPylonCommand, Command_DeployableShopBuyPylon, arena);
+        _commandManager.RemoveCommand(DeployableShopBuyOutpostCommand, Command_DeployableShopBuyOutpost, arena);
+        _commandManager.RemoveCommand(DeployableShopBuyWarStationCommand, Command_DeployableShopBuyWarStation, arena);
+        _commandManager.RemoveCommand(DeployableShopShopCommand, Command_DeployableShopShop, arena);
         _commandManager.RemoveCommand(DeployableShopBuyCommand, Command_DeployableShopBuy, arena);
     }
 

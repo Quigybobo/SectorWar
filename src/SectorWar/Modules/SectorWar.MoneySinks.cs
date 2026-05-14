@@ -150,9 +150,6 @@ public sealed partial class SectorWar : IMoneySinks
             return;
         }
 
-        _commandManager.AddCommand(MoneySinksDiceCommand, Command_MoneySinksDice);
-        _commandManager.AddCommand(MoneySinksJackpotCommand, Command_MoneySinksJackpot);
-
         // Cache the delegate so the matched ClearTimer in Unload uses the
         // same reference. SS.NET's timer table is delegate-keyed.
         _moneySinksWealthTaxDelegate = OnMoneySinksWealthTaxTick;
@@ -172,9 +169,6 @@ public sealed partial class SectorWar : IMoneySinks
         if (_moneySinksToken is not null)
             broker.UnregisterInterface(ref _moneySinksToken);
 
-        _commandManager.RemoveCommand(MoneySinksDiceCommand, Command_MoneySinksDice);
-        _commandManager.RemoveCommand(MoneySinksJackpotCommand, Command_MoneySinksJackpot);
-
         if (_moneySinksWealthTaxDelegate is not null)
         {
             _serverTimer.ClearTimer(_moneySinksWealthTaxDelegate, this);
@@ -189,8 +183,21 @@ public sealed partial class SectorWar : IMoneySinks
     // PER-ARENA ATTACH / DETACH (no-ops — zone-wide)
     // -------------------------------------------------------------------------
 
-    private void AttachMoneySinks(Arena arena) { /* zone-wide */ }
-    private void DetachMoneySinks(Arena arena) { /* zone-wide */ }
+    private void AttachMoneySinks(Arena arena)
+    {
+        // Commands only function with IEconomy; if Load returned early
+        // because IEconomy was unavailable, skip registration too.
+        if (_moneySinksEconomy is null) return;
+        _commandManager.AddCommand(MoneySinksDiceCommand, Command_MoneySinksDice, arena);
+        _commandManager.AddCommand(MoneySinksJackpotCommand, Command_MoneySinksJackpot, arena);
+    }
+
+    private void DetachMoneySinks(Arena arena)
+    {
+        if (_moneySinksEconomy is null) return;
+        _commandManager.RemoveCommand(MoneySinksDiceCommand, Command_MoneySinksDice, arena);
+        _commandManager.RemoveCommand(MoneySinksJackpotCommand, Command_MoneySinksJackpot, arena);
+    }
 
     // -------------------------------------------------------------------------
     // IMoneySinks IMPLEMENTATION

@@ -38,12 +38,19 @@ namespace SS.SectorWar.Modules;
 
 public sealed partial class SectorWar
 {
-    /// <summary>LVZ object reserved by tools/lvz_warbird_capital.py.</summary>
-    private const short TutorialPosterSlot = 9500;
+    /// <summary>LVZ objects reserved by tools/lvz_warbird_capital.py.
+    /// Slot A = Quick Start poster (Commands / Gameplay / How To Win).
+    /// Slot B = Combat &amp; Defense poster (HQ Anatomy / Deployables /
+    /// Inventory + Ships). Both 768x768.</summary>
+    private const short TutorialPosterSlotA = 9500;
+    private const short TutorialPosterSlotB = 9501;
 
-    /// <summary>Top-left pixel anchor for the 768x768 poster. Sits in tiles
-    /// (2, 2) to (50, 50) — well away from either team's spawn.</summary>
-    private const short TutorialPosterAnchorX = 32;
+    /// <summary>Pixel anchors. Poster A at (32, 32) → tiles (2, 2)..(50, 50).
+    /// Poster B at (832, 32) → tiles (52, 2)..(100, 50). Together they
+    /// span 1568 px along the top of the map — well clear of both team
+    /// spawns (~tile 256 / 768 on the X axis).</summary>
+    private const short TutorialPosterAnchorX_A = 32;
+    private const short TutorialPosterAnchorX_B = 832;
     private const short TutorialPosterAnchorY = 32;
 
     private void LoadTutorial(IComponentBroker broker)
@@ -57,10 +64,15 @@ public sealed partial class SectorWar
     {
         try
         {
-            _lvzObjects.SetPosition(arena, TutorialPosterSlot,
-                TutorialPosterAnchorX, TutorialPosterAnchorY,
+            _lvzObjects.SetPosition(arena, TutorialPosterSlotA,
+                TutorialPosterAnchorX_A, TutorialPosterAnchorY,
                 ScreenOffset.Normal, ScreenOffset.Normal);
-            _lvzObjects.Toggle(arena, TutorialPosterSlot, true);
+            _lvzObjects.Toggle(arena, TutorialPosterSlotA, true);
+
+            _lvzObjects.SetPosition(arena, TutorialPosterSlotB,
+                TutorialPosterAnchorX_B, TutorialPosterAnchorY,
+                ScreenOffset.Normal, ScreenOffset.Normal);
+            _lvzObjects.Toggle(arena, TutorialPosterSlotB, true);
         }
         catch (Exception ex)
         {
@@ -71,7 +83,9 @@ public sealed partial class SectorWar
 
     private void DetachTutorial(Arena arena)
     {
-        try { _lvzObjects.Toggle(arena, TutorialPosterSlot, false); }
+        try { _lvzObjects.Toggle(arena, TutorialPosterSlotA, false); }
+        catch { /* phong's no-crash rule */ }
+        try { _lvzObjects.Toggle(arena, TutorialPosterSlotB, false); }
         catch { /* phong's no-crash rule */ }
     }
 }

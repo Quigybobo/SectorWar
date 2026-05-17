@@ -325,13 +325,15 @@ public sealed partial class SectorWar
     private void AttachHq(Arena arena)
     {
         ArenaActionCallback.Register(arena, OnArenaAction_Hq);
-        // Per-arena ?startwar command — kicks off the HQ formation.
+        // Per-arena commands.
         _commandManager.AddCommand("startwar", Command_StartWar, arena);
+        _commandManager.AddCommand("warrecycle", Command_WarRecycle, arena);
     }
 
     private void DetachHq(Arena arena)
     {
         _commandManager.RemoveCommand("startwar", Command_StartWar, arena);
+        _commandManager.RemoveCommand("warrecycle", Command_WarRecycle, arena);
         ArenaActionCallback.Unregister(arena, OnArenaAction_Hq);
         DespawnHqArena(arena);
     }
@@ -369,6 +371,65 @@ public sealed partial class SectorWar
         _chat.SendArenaMessage(arena, ChatSound.Goal,
             $"*** {player.Name} STARTED THE WAR ***");
         TrySpawnHqArena(arena);
+    }
+
+    /// <summary>?warrecycle — despawn every fake player in the arena, then
+    /// recycle. Works around the SS.NET framework refusing
+    /// IArenaManager.RecycleArena when any fakes are present
+    /// (see ArenaManager.RecycleArena: "Can't recycle arena with fake players").
+    /// Sysop/smod only — gate via cmd_warrecycle in conf/groupdef.dir/&lt;group&gt;.</summary>
+    [CommandHelp(Targets = CommandTarget.None, Args = null,
+        Description = "Sysop: end all fake players in this arena and recycle it. Works around the framework's 'can't recycle arena with fake players' refusal.")]
+    private void Command_WarRecycle(ReadOnlySpan<char> commandName,
+        ReadOnlySpan<char> parameters, Player player, ITarget target)
+    {
+        Arena? arena = player.Arena;
+        if (arena is null)
+        {
+            _chat.SendMessage(player, "?warrecycle: not in an arena.");
+            return;
+        }
+
+        // Snapshot fakes under the player-data lock, then end them outside
+        // the lock so IFake.EndFaked can take whatever locks it needs.
+        var fakes = new List<Player>();
+        _playerData.Lock();
+        try
+        {
+            foreach (Player p in _playerData.Players)
+            {
+                if (p.Arena != arena) continue;
+                if (p.Type == ClientType.Fake) fakes.Add(p);
+            }
+        }
+        finally { _playerData.Unlock(); }
+
+        int kicked = 0;
+        foreach (Player fake in fakes)
+        {
+            try
+            {
+                if (_fake.EndFaked(fake)) kicked++;
+            }
+            catch (Exception ex)
+            {
+                _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                    $"?warrecycle: EndFaked failed for '{fake.Name}': {ex.Message}");
+            }
+        }
+
+        _chat.SendMessage(player,
+            $"?warrecycle: despawned {kicked} fake(s); recycling arena...");
+        _logManager.LogA(LogLevel.Info, LogCategory, arena,
+            $"?warrecycle by {player.Name}: ended {kicked} fake(s), calling RecycleArena.");
+
+        if (!_arenaManager.RecycleArena(arena))
+        {
+            _chat.SendMessage(player,
+                "?warrecycle: RecycleArena returned false (check server log).");
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                "?warrecycle: RecycleArena returned false after fakes were despawned.");
+        }
     }
 
     // -------------------------------------------------------------------------

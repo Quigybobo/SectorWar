@@ -1774,6 +1774,25 @@ public sealed partial class SectorWar : IInventory
     private void Command_InventoryMenu(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
+        // Diagnostics for the most common silent-failure paths (player-only chat,
+        // no server-log spam):
+        //   1. SelectBox channel needs spec — Continuum requirement.
+        //   2. _inventorySelectBox can be null if the ISelectBox host module
+        //      isn't loaded on this zone.
+        if (player.Ship != ShipType.Spec)
+        {
+            _chat.SendMessage(player,
+                "?menu only opens the dialog UI in spectator mode. " +
+                "Use ?shop / ?inv for text-mode fallbacks while flying.");
+            return;
+        }
+        if (_inventorySelectBox is null)
+        {
+            _chat.SendMessage(player,
+                "?menu: SelectBox host module isn't loaded on this zone. " +
+                "Ask phong to attach SS.Core.Modules.SelectBox.");
+            return;
+        }
         OpenInventoryTopMenu(player);
     }
 

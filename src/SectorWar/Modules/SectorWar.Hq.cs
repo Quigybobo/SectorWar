@@ -358,13 +358,26 @@ public sealed partial class SectorWar
     private void Command_StartWar(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
+        // Diagnostic messages go to the invoker only (no server log spam).
         Arena? arena = player.Arena;
-        if (arena is null) return;
-        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return;
+        if (arena is null)
+        {
+            _chat.SendMessage(player, "?start war: you're not in an arena.");
+            return;
+        }
+        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad))
+        {
+            _chat.SendMessage(player,
+                $"?start war: SectorWar isn't attached to '{arena.Name}'. " +
+                "Try ?go sectorwar then ?start war.");
+            return;
+        }
 
         if (ad.HqArenaState is not null)
         {
-            _chat.SendMessage(player, "War is already in progress. Destroy an HQ capital to end it.");
+            _chat.SendMessage(player,
+                "?start war: war is already in progress. " +
+                "Destroy an HQ capital to end it, or ?wipe arena to force-end (sysop).");
             return;
         }
 

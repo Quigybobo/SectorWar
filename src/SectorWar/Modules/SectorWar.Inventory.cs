@@ -1774,26 +1774,45 @@ public sealed partial class SectorWar : IInventory
     private void Command_InventoryMenu(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
-        // Diagnostics for the most common silent-failure paths (player-only chat,
-        // no server-log spam):
-        //   1. SelectBox channel needs spec — Continuum requirement.
-        //   2. _inventorySelectBox can be null if the ISelectBox host module
-        //      isn't loaded on this zone.
-        if (player.Ship != ShipType.Spec)
+        // In spec: open the full SelectBox dialog UI (arrow-key navigation).
+        // In flight: print a text-mode menu so players in mid-match can still
+        // see what's available + which commands to use. Continuum's SelectBox
+        // channel is spec-only, but the underlying commands (?buy pylon, etc.)
+        // work in-flight just fine.
+        if (player.Ship == ShipType.Spec)
         {
-            _chat.SendMessage(player,
-                "?menu only opens the dialog UI in spectator mode. " +
-                "Use ?shop / ?inv for text-mode fallbacks while flying.");
+            if (_inventorySelectBox is null)
+            {
+                _chat.SendMessage(player,
+                    "?menu: SelectBox host module isn't loaded on this zone. " +
+                    "Ask phong to attach SS.Core.Modules.SelectBox.");
+                return;
+            }
+            OpenInventoryTopMenu(player);
             return;
         }
-        if (_inventorySelectBox is null)
-        {
-            _chat.SendMessage(player,
-                "?menu: SelectBox host module isn't loaded on this zone. " +
-                "Ask phong to attach SS.Core.Modules.SelectBox.");
-            return;
-        }
-        OpenInventoryTopMenu(player);
+
+        // Flight mode: text-mode quick reference. Each item lists the direct
+        // command so players can fire it off without going to spec.
+        _chat.SendMessage(player, "--- SectorWar quick menu (flight) ---");
+        _chat.SendMessage(player, "DEPLOYABLES (cost in credits):");
+        _chat.SendMessage(player, "  ?buy pylon         - power source + claim point");
+        _chat.SendMessage(player, "  ?buy outpost       - 5-turret defense ring");
+        _chat.SendMessage(player, "  ?buy warstation    - 9-turret fortress");
+        _chat.SendMessage(player, "  ?deploy shop       - full deployable price list");
+        _chat.SendMessage(player, "STATS / ECONOMY:");
+        _chat.SendMessage(player, "  ?bal               - credit balance");
+        _chat.SendMessage(player, "  ?sectorwar         - level / XP / credits");
+        _chat.SendMessage(player, "  ?top               - wealthiest online players");
+        _chat.SendMessage(player, "  ?market / ?portfolio - ticker prices + holdings");
+        _chat.SendMessage(player, "INVENTORY (spec to equip/unequip):");
+        _chat.SendMessage(player, "  ?inv               - your equipped + backpack items");
+        _chat.SendMessage(player, "  ?shop              - browse item catalog");
+        _chat.SendMessage(player, "GAME:");
+        _chat.SendMessage(player, "  ?start war         - spawn both team HQs (begin round)");
+        _chat.SendMessage(player, "  ?claim             - this arena's pylon-claim state");
+        _chat.SendMessage(player, "");
+        _chat.SendMessage(player, "Spec (Esc) and re-type ?menu for the full dialog UI.");
     }
 
     /// <summary>?shop — in spec, opens the dialog UI; otherwise prints a

@@ -421,15 +421,35 @@ public sealed partial class SectorWar
         _chat.SendMessage(player,
             $"?warrecycle: despawned {kicked} fake(s); recycling arena...");
         _logManager.LogA(LogLevel.Info, LogCategory, arena,
-            $"?warrecycle by {player.Name}: ended {kicked} fake(s), calling RecycleArena.");
+            $"?warrecycle by {player.Name}: ended {kicked} fake(s), queueing RecycleArena.");
 
-        if (!_arenaManager.RecycleArena(arena))
+        // CRITICAL: IFake.EndFaked is asynchronous — it queues a
+        // MainloopWork item that runs the actual FreePlayer call later.
+        // If we call IArenaManager.RecycleArena right here, the fakes are
+        // still in _playerData.Players and RecycleArena refuses with
+        // "Can't recycle arena with fake players."
+        //
+        // The mainloop work queue is FIFO. Queue RecycleArena LAST so it
+        // runs after every EndFake item drains. The captured `arena`
+        // reference is fine — Arena objects outlive this lambda.
+        Arena recycleTarget = arena;
+        Player invoker = player;
+        _mainloop.QueueMainWorkItem(_ =>
         {
-            _chat.SendMessage(player,
-                "?warrecycle: RecycleArena returned false (check server log).");
-            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
-                "?warrecycle: RecycleArena returned false after fakes were despawned.");
-        }
+            if (!_arenaManager.RecycleArena(recycleTarget))
+            {
+                _logManager.LogA(LogLevel.Warn, LogCategory, recycleTarget,
+                    "?warrecycle: RecycleArena returned false even after fakes drained " +
+                    "(check arena.Status — may not be Running).");
+                try
+                {
+                    _chat.SendMessage(invoker,
+                        "?warrecycle: RecycleArena still returned false. " +
+                        "Arena may not be in Running state. Check server log.");
+                }
+                catch { /* invoker may have been freed during the queue drain */ }
+            }
+        }, 0);
     }
 
     // -------------------------------------------------------------------------

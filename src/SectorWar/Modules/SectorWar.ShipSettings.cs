@@ -199,6 +199,10 @@ public sealed partial class SectorWar : IShipSettings
     {
         if (action != PlayerAction.EnterGame) return;
         if (player is null || arena is null) return;
+        // Arena-attach guard: callback is zone-wide; don't apply SectorWar
+        // floor overrides to non-SectorWar arenas.
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
         ApplyShipSettingsFloorOverrides(player, arena);
     }
 

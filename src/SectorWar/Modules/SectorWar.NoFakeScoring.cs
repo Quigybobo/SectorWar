@@ -59,6 +59,11 @@ public sealed partial class SectorWar
     private void OnKill_NoFakeScoring(Arena arena, Player killer, Player killed,
         short bounty, short flagCount, short points, Prize green)
     {
+        // Arena-attach guard: callback is zone-wide; only zero fake stats in
+        // arenas where SectorWar is attached (fakes in other arenas may belong
+        // to other modules and shouldn't be touched).
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
         if (killer.Type == ClientType.Fake) ZeroFakeStats_NoFakeScoring(killer);
         if (killed.Type == ClientType.Fake) ZeroFakeStats_NoFakeScoring(killed);
     }

@@ -160,6 +160,10 @@ public sealed partial class SectorWar
     {
         if (player is null || arena is null || player.Arena != arena) return;
         if (action != PlayerAction.EnterArena) return;
+        // Arena-attach guard: callback is zone-wide; without this we'd show the
+        // SectorWar MOTD on first entry to every non-SectorWar arena too.
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
         if (!player.TryGetExtraData(_motdPdKey, out MotdPlayerData? pd)) return;
 
         if (!pd.HasSeenMotd)

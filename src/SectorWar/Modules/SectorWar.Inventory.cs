@@ -1665,6 +1665,7 @@ public sealed partial class SectorWar : IInventory
     {
         if (action == PlayerAction.Disconnect || action == PlayerAction.LeaveArena)
         {
+            // Cleanup branch — always safe (no-op for players without state).
             SetInventoryMenuState(player, InventoryMenuState.None);
             lock (_inventoryMenuStateLock)
             {
@@ -1675,7 +1676,10 @@ public sealed partial class SectorWar : IInventory
         }
         else if (action == PlayerAction.EnterGame)
         {
-            // (Re-)apply turret loadout for whatever ship the player just entered.
+            // Arena-attach guard: don't sync turrets in non-SectorWar arenas.
+            if (arena is null) return;
+            arena.TryGetExtraData(_adKey, out ArenaData? ad);
+            if (ad?.Arena is null) return;
             SyncTurretsForCurrentShip_Inventory(player);
         }
     }
@@ -1685,9 +1689,13 @@ public sealed partial class SectorWar : IInventory
     private void OnShipFreqChange_Inventory(Player player, ShipType newShip, ShipType oldShip,
         short newFreq, short oldFreq)
     {
-        // Ship swap → resync turrets to match the new ship's WeaponMod loadout.
-        if (newShip != oldShip)
-            SyncTurretsForCurrentShip_Inventory(player);
+        if (newShip == oldShip) return;
+        // Arena-attach guard: don't sync turrets in non-SectorWar arenas.
+        Arena? arena = player.Arena;
+        if (arena is null) return;
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
+        SyncTurretsForCurrentShip_Inventory(player);
     }
 
     // -------------------------------------------------------------------------

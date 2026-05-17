@@ -469,17 +469,33 @@ public sealed partial class SectorWar : IGunTurret
 
     private void OnPlayerAction_GunTurret(Player player, PlayerAction action, Arena? arena)
     {
+        // Disconnect/LeaveArena are cleanup — always safe to run (no-op for
+        // players without GunTurret state). Only EnterGame's activation needs
+        // an arena-attach guard so it doesn't spawn turrets in non-SectorWar
+        // arenas.
         if (action == PlayerAction.Disconnect)
             ((IGunTurret)this).RemoveAllTurrets(player);
         else if (action == PlayerAction.LeaveArena)
             DisableAllGunTurrets(player);
         else if (action == PlayerAction.EnterGame && player.Ship != ShipType.Spec)
+        {
+            if (arena is null) return;
+            arena.TryGetExtraData(_adKey, out ArenaData? ad);
+            if (ad?.Arena is null) return;
             ActivateAllGunTurrets(player);
+        }
     }
 
     private void OnShipFreqChange_GunTurret(Player player, ShipType newShip,
         ShipType oldShip, short newFreq, short oldFreq)
     {
+        // Arena-attach guard: callback is zone-wide; if the player isn't in
+        // an attached SectorWar arena, none of these branches should run.
+        Arena? arena = player.Arena;
+        if (arena is null) return;
+        arena.TryGetExtraData(_adKey, out ArenaData? adGuard);
+        if (adGuard?.Arena is null) return;
+
         if (newShip == ShipType.Spec && oldShip != ShipType.Spec)
             DisableAllGunTurrets(player);
         else if (oldShip == ShipType.Spec && newShip != ShipType.Spec)
@@ -509,6 +525,14 @@ public sealed partial class SectorWar : IGunTurret
         bool anchorIsBomb = anchorWeapon == WeaponCodes.Bomb
             || anchorWeapon == WeaponCodes.ProxBomb;
         if (!anchorIsBullet && !anchorIsBomb) return;
+
+        // Arena-attach guard: callback is zone-wide; without this, a player
+        // who equipped gun turrets in a SectorWar arena would still trigger
+        // turret fire in any other arena they visit.
+        Arena? arena = player.Arena;
+        if (arena is null) return;
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
 
         if (!player.TryGetExtraData(_gunTurretPdKey, out GunTurretPlayerData? pd)) return;
 

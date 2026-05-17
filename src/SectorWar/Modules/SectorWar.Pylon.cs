@@ -993,10 +993,20 @@ public sealed partial class SectorWar : IPylon
             }
         }
 
+        // Also tear down HQ subsystem state. Without this, HqArenaState retains
+        // references to the just-removed HQ bots and ?startwar refuses with
+        // "war is already in progress" even though no HQs are actually alive.
+        try { DespawnHqArena(arena); }
+        catch (Exception ex)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"?wipearena: DespawnHqArena failed: {ex.Message}");
+        }
+
         _chat.SendMessage(player,
             $"Wiped arena: {pylonCount} pylon(s), {structureCount} structure(s), " +
-            $"{botCount} stray bot(s) removed. " +
-            "(AI defenses re-spawn on arena recycle.)");
+            $"{botCount} stray bot(s) removed; HQ state cleared. " +
+            "(AI defenses re-spawn on arena recycle. ?startwar to start a new round.)");
     }
 
     [CommandHelp(

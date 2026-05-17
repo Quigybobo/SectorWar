@@ -245,6 +245,11 @@ public sealed partial class SectorWar : IEconomy, IRpg
         short bounty, short flagCount, short points, Prize green)
     {
         if (killer is null) return;
+        // Arena-attach guard: callbacks register zone-wide via broker, so this
+        // fires for every arena. Skip arenas where SectorWar isn't attached so
+        // we don't leak XP/credits/level messages into unrelated arenas.
+        arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
         if (!killer.TryGetExtraData(_rpgPdKey, out RpgPlayerData? pd)) return;
 
         int xpPerKill = _configManager.GetInt(arena.Cfg!, RpgConfSection, "XpPerKill", 100);
@@ -257,6 +262,10 @@ public sealed partial class SectorWar : IEconomy, IRpg
     private void OnGreen_Rpg(Player player, int x, int y, Prize prize)
     {
         if (player is null || player.Arena is null) return;
+        // Arena-attach guard: see OnKill_Rpg for rationale. Without this, every
+        // green pickup in every arena triggers SectorWar XP/credits awards.
+        player.Arena.TryGetExtraData(_adKey, out ArenaData? ad);
+        if (ad?.Arena is null) return;
         if (!player.TryGetExtraData(_rpgPdKey, out RpgPlayerData? pd)) return;
 
         int xpPerGreen = _configManager.GetInt(player.Arena.Cfg!, RpgConfSection, "XpPerGreen", 5);

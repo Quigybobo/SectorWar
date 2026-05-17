@@ -190,7 +190,8 @@ public sealed partial class SectorWar
     }
 
     /// <summary>
-    /// Wipe deployables + respawn HQs + warp players. Returns to Active state.
+    /// Wipe deployables + tear down BOTH HQs + warp players. Leaves the arena
+    /// idle (no HQs) so a player must type ?startwar to begin the next round.
     /// </summary>
     private void ExecuteRoundReset_RoundManager(Arena arena, ArenaData ad,
         RoundManagerArenaState st)
@@ -204,11 +205,12 @@ public sealed partial class SectorWar
                 $"Round reset: deployable wipe failed: {ex.Message}");
         }
 
-        try { RespawnHqs_RoundManager(arena); }
+        // Tear down both HQs but do NOT respawn — wait for ?startwar.
+        try { DespawnHqArena(arena); }
         catch (Exception ex)
         {
             _logManager.LogA(LogLevel.Warn, LogCategory, arena,
-                $"Round reset: HQ respawn failed: {ex.Message}");
+                $"Round reset: HQ despawn failed: {ex.Message}");
         }
 
         try { WarpPlayersToSpawn_RoundManager(arena); }
@@ -218,9 +220,11 @@ public sealed partial class SectorWar
                 $"Round reset: warp failed: {ex.Message}");
         }
 
-        _chat.SendArenaMessage(arena, ChatSound.Goal, "*** Round 2: FIGHT ***");
+        _chat.SendArenaMessage(arena, ChatSound.Goal,
+            "*** War over — type ?startwar to begin a new round ***");
 
-        // Reset state for next round.
+        // Reset state. Stays Active (no HQs alive = nothing to end), so the
+        // next ?startwar + capital death will trigger this path again cleanly.
         st.State = RoundState.Active;
         st.WinnerFreq = -1;
         st.LoserFreq = -1;

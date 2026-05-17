@@ -325,10 +325,13 @@ public sealed partial class SectorWar
     private void AttachHq(Arena arena)
     {
         ArenaActionCallback.Register(arena, OnArenaAction_Hq);
+        // Per-arena ?startwar command — kicks off the HQ formation.
+        _commandManager.AddCommand("startwar", Command_StartWar, arena);
     }
 
     private void DetachHq(Arena arena)
     {
+        _commandManager.RemoveCommand("startwar", Command_StartWar, arena);
         ArenaActionCallback.Unregister(arena, OnArenaAction_Hq);
         DespawnHqArena(arena);
     }
@@ -337,10 +340,35 @@ public sealed partial class SectorWar
     {
         switch (action)
         {
-            case ArenaAction.Create: TrySpawnHqArena(arena); break;
+            // HQs no longer auto-spawn on arena Create — players type ?startwar
+            // to begin a war. When a war ends (RoundManager wipes the HQs), the
+            // arena returns to an idle state and waits for the next ?startwar.
             case ArenaAction.Destroy: DespawnHqArena(arena); break;
             case ArenaAction.ConfChanged: ReloadHqConf(arena); break;
         }
+    }
+
+    /// <summary>?startwar — spawn the HQ formation if a war isn't already
+    /// active. Anyone can run it. Becomes a sysop-only / capture-the-base
+    /// trigger later.</summary>
+    [CommandHelp(Targets = CommandTarget.None, Args = null,
+        Description = "Start a SectorWar round. Spawns both team HQs.")]
+    private void Command_StartWar(ReadOnlySpan<char> commandName,
+        ReadOnlySpan<char> parameters, Player player, ITarget target)
+    {
+        Arena? arena = player.Arena;
+        if (arena is null) return;
+        if (!arena.TryGetExtraData(_adKey, out ArenaData? ad)) return;
+
+        if (ad.HqArenaState is not null)
+        {
+            _chat.SendMessage(player, "War is already in progress. Destroy an HQ capital to end it.");
+            return;
+        }
+
+        _chat.SendArenaMessage(arena, ChatSound.Goal,
+            $"*** {player.Name} STARTED THE WAR ***");
+        TrySpawnHqArena(arena);
     }
 
     // -------------------------------------------------------------------------

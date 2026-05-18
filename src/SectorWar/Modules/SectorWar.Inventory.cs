@@ -165,8 +165,10 @@ public sealed partial class SectorWar : IInventory
     /// <summary>?shopsell &lt;backpack#&gt; — sell at 50% refund.</summary>
     private const string InventoryShopSellCommand = "shopsell";
 
-    /// <summary>?menu — opens the unified SectorWar top-menu dialog.</summary>
-    private const string InventoryMenuCommand = "menu";
+    /// <summary>?hq — opens the unified SectorWar top-menu dialog. Renamed
+    /// from ?menu (2026-05-17) to avoid conflict with other modules on
+    /// Nexus that register ?menu. Capability gate: cmd_hq.</summary>
+    private const string InventoryMenuCommand = "hq";
 
     // -------------------------------------------------------------------------
     // SELECT-BOX VALUE-ENCODING SCHEME
@@ -1767,10 +1769,11 @@ public sealed partial class SectorWar : IInventory
     // the player is flying.
     // -------------------------------------------------------------------------
 
-    /// <summary>?menu — opens the unified SectorWar top-menu dialog. Arrow
-    /// keys to navigate, Enter to select, Esc to close.</summary>
+    /// <summary>?hq — opens the unified SectorWar top-menu dialog. Arrow
+    /// keys to navigate, Enter to select, Esc to close. Was ?menu before
+    /// 2026-05-17 — renamed to avoid Nexus collision.</summary>
     [CommandHelp(Targets = CommandTarget.None, Args = null,
-        Description = "Open the unified SectorWar menu (shop, inventory). Arrow keys to navigate, Enter to select, Esc to close.")]
+        Description = "Open the SectorWar HQ menu (shop, inventory, deploy). In spec: dialog UI with arrows + Enter. In flight: text-mode quick reference.")]
     private void Command_InventoryMenu(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
@@ -1784,7 +1787,7 @@ public sealed partial class SectorWar : IInventory
             if (_inventorySelectBox is null)
             {
                 _chat.SendMessage(player,
-                    "?menu: SelectBox host module isn't loaded on this zone. " +
+                    "?hq: SelectBox host module isn't loaded on this zone. " +
                     "Ask phong to attach SS.Core.Modules.SelectBox.");
                 return;
             }
@@ -1812,7 +1815,7 @@ public sealed partial class SectorWar : IInventory
         _chat.SendMessage(player, "  ?start war         - spawn both team HQs (begin round)");
         _chat.SendMessage(player, "  ?claim             - this arena's pylon-claim state");
         _chat.SendMessage(player, "");
-        _chat.SendMessage(player, "Spec (Esc) and re-type ?menu for the full dialog UI.");
+        _chat.SendMessage(player, "Spec (Esc) and re-type ?hq for the full dialog UI.");
     }
 
     /// <summary>?shop — in spec, opens the dialog UI; otherwise prints a
@@ -1834,7 +1837,7 @@ public sealed partial class SectorWar : IInventory
             string effect = SummarizeInventoryModifiers(item);
             _chat.SendMessage(player, $"  [{item.Id}] {item.DisplayName} - {item.Cost} cr ({effect})");
         }
-        _chat.SendMessage(player, "Spectate (Esc) and ?shop or ?menu for the dialog UI.");
+        _chat.SendMessage(player, "Spectate (Esc) and ?shop or ?hq for the dialog UI.");
     }
 
     /// <summary>?shopbuy &lt;id&gt; — buy by id without opening the dialog.</summary>

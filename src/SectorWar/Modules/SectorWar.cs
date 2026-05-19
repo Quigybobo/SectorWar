@@ -124,7 +124,7 @@ namespace SS.SectorWar.Modules;
     "Aggregates ~29 SectorWar subsystems behind one IArenaAttachableModule for " +
     "Nexus compatibility. Currently an empty scaffold; subsystems land via " +
     "partial-class files in Phase 1.")]
-public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
+public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule, ISelectBox
 {
     // -------------------------------------------------------------------------
     // CONSTANTS
@@ -240,6 +240,15 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
     // CONSTRUCTOR
     // -------------------------------------------------------------------------
 
+    /// <summary>Used by the absorbed SelectBox subsystem (SectorWar.SelectBox.cs)
+    /// to send the S2C SelectBox packet directly to Continuum clients. Avoids
+    /// needing SS.Core.Modules.SelectBox as a separate module on the host.</summary>
+    private readonly INetwork _network;
+
+    /// <summary>Used by the absorbed SelectBox subsystem to rent + return
+    /// HashSet&lt;Player&gt; pools when targeting players for packet send.</summary>
+    private readonly IObjectPoolManager _objectPoolManager;
+
     /// <summary>
     /// SS.NET DI entry-point. Throws on null services so a misconfigured zone
     /// fails at construct-time rather than mysteriously at first arena attach.
@@ -265,6 +274,8 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         IMainloop mainloop,
         IMainloopTimer mainloopTimer,
         IMapData mapData,
+        INetwork network,
+        IObjectPoolManager objectPoolManager,
         IPlayerData playerData,
         IServerTimer serverTimer)
     {
@@ -282,6 +293,8 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         _mainloop = mainloop ?? throw new ArgumentNullException(nameof(mainloop));
         _mainloopTimer = mainloopTimer ?? throw new ArgumentNullException(nameof(mainloopTimer));
         _mapData = mapData ?? throw new ArgumentNullException(nameof(mapData));
+        _network = network ?? throw new ArgumentNullException(nameof(network));
+        _objectPoolManager = objectPoolManager ?? throw new ArgumentNullException(nameof(objectPoolManager));
         _playerData = playerData ?? throw new ArgumentNullException(nameof(playerData));
         _serverTimer = serverTimer ?? throw new ArgumentNullException(nameof(serverTimer));
     }
@@ -325,6 +338,11 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         // bail). Rpg itself only needs IPersist, a core interface that's
         // always available.
         await LoadRpgAsync(broker, cancellationToken);
+
+        // SelectBox absorbed from SS.Core.Modules.SelectBox so Inventory's
+        // dialog UI works without a separate module attach. Loads early because
+        // Inventory + downstream consumers resolve ISelectBox at their own load.
+        LoadSelectBox(broker);
 
         // Foundation utilities (no inter-subsystem deps).
         LoadFreqChangeWarp(broker);
@@ -427,6 +445,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         UnloadMotd(broker);
         UnloadWarpInEffect(broker);
         UnloadFreqChangeWarp(broker);
+        UnloadSelectBox(broker);
 
         _arenaManager.FreeArenaData(ref _adKey);
 
@@ -471,6 +490,7 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         // for THIS arena only. Order doesn't matter when subsystems are
         // independent (FreqChangeWarp is independent — pure ShipFreqChange
         // observer).
+        AttachSelectBox(arena);     // no-op, but kept for lifecycle symmetry
         AttachFreqChangeWarp(arena);
         AttachWarpInEffect(arena);
         AttachMotd(arena);
@@ -719,6 +739,12 @@ public sealed partial class SectorWar : IAsyncModule, IArenaAttachableModule
         {
             _logManager.LogA(LogLevel.Warn, LogCategory, arena,
                 $"FreqChangeWarp detach failed: {ex.Message}");
+        }
+        try { DetachSelectBox(arena); } // no-op stub, but kept for symmetry
+        catch (Exception ex)
+        {
+            _logManager.LogA(LogLevel.Warn, LogCategory, arena,
+                $"SelectBox detach failed: {ex.Message}");
         }
 
         ad.Arena = null;

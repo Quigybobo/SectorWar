@@ -1777,20 +1777,13 @@ public sealed partial class SectorWar : IInventory
     private void Command_InventoryMenu(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
-        // In spec: open the full SelectBox dialog UI (arrow-key navigation).
-        // In flight: print a text-mode menu so players in mid-match can still
-        // see what's available + which commands to use. Continuum's SelectBox
-        // channel is spec-only, but the underlying commands (?buy pylon, etc.)
-        // work in-flight just fine.
-        if (player.Ship == ShipType.Spec)
+        // In spec WITH SelectBox loaded: open the full SelectBox dialog UI
+        // (arrow-key navigation).
+        // Otherwise (flight, OR spec without SelectBox): print a text-mode
+        // menu so players can see what's available + which commands to use.
+        // The underlying commands (?buy pylon, etc.) work in-flight just fine.
+        if (player.Ship == ShipType.Spec && _inventorySelectBox is not null)
         {
-            if (_inventorySelectBox is null)
-            {
-                _chat.SendMessage(player,
-                    "?hq: SelectBox host module isn't loaded on this zone. " +
-                    "Ask phong to attach SS.Core.Modules.SelectBox.");
-                return;
-            }
             OpenInventoryTopMenu(player);
             return;
         }

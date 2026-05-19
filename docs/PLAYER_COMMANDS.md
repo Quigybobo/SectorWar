@@ -1,6 +1,6 @@
 # SectorWar — player commands + arena menu reference
 
-Authoritative list of every chat command, plus the structure of the `?menu`
+Authoritative list of every chat command, plus the structure of the `?hq`
 SelectBox UI.
 
 **Command-name convention**: Nexus uses **spaces** between the verb and noun
@@ -8,7 +8,7 @@ SelectBox UI.
 `?shipinfo`). The cmd_* capability is the first token only (`cmd_buy`,
 `cmd_shop`, `cmd_ship`).
 
-Last verified against commit `8aa3cf5` (2026-05-17).
+Last verified against commit `372d20a` (2026-05-19).
 
 ---
 
@@ -101,8 +101,9 @@ Last verified against commit `8aa3cf5` (2026-05-17).
 
 ## Arena menu (`?hq`) — UI tree
 
-Open in spectator mode for the dialog interface (arrow keys + Enter + Esc).
-Flying players get a text-mode fallback printed to chat.
+Works in any ship state (spec or in flight). The dialog UI is provided by
+the umbrella's absorbed SelectBox subsystem, so no separate module attach is
+needed on the host.
 
 ```
 TopMenu
@@ -141,9 +142,11 @@ TopMenu
 **Menu controls**: arrow keys navigate, Enter selects, Esc closes. Sub-menus all
 have `<- Back to menu` as the last item.
 
-**Spec requirement**: dialog UI requires spectator mode (Continuum's SelectBox
-channel is gated on spec). Flying players see a text-mode fallback for `?shop`
-and `?inv`; other items just print "spec to use this".
+**Ship-state requirement**: `?hq` opens the dialog UI in any ship state
+(spec or flight). Specific actions inside the menu — buying from the shop,
+equipping or unequipping items — still require spectator mode and will print
+a "spec to use this" hint if attempted in flight. Flying players see a
+text-mode fallback for `?shop` and `?inv`.
 
 ---
 

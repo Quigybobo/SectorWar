@@ -80,14 +80,14 @@ namespace SS.SectorWar.Modules;
 //   - Fakes registered: NONE.
 //   - Timers scheduled: NONE.
 //   - Commands registered (8): cmd_shop, cmd_shopbuy, cmd_inv, cmd_inventory,
-//                              cmd_equip, cmd_unequip, cmd_shopsell, cmd_menu.
+//                              cmd_equip, cmd_unequip, cmd_shopsell, cmd_hq.
 //   - Broker interfaces published: IInventory.
 //   - Broker interfaces consumed (per-call or cached at Load): IEconomy,
 //     IShipSettings, IRpg, IMoneySinks, IMarketReader, IGunTurret, IPersist,
-//     ISelectBox, IDeployableShop. The umbrella now provides several of
-//     those itself (IEconomy, IShipSettings, IRpg, IMoneySinks, IMarketReader,
-//     IGunTurret, IDeployableShop) — but we still go through the broker so
-//     this partial behaves identically whether the umbrella or a standalone
+//     ISelectBox, IDeployableShop. The umbrella now provides ALL of these
+//     itself (ISelectBox was absorbed in commit 62e359b; the rest are
+//     umbrella partials too) — but we still go through the broker so this
+//     partial behaves identically whether the umbrella or a standalone
 //     library copy is publishing the interface. Casting `this` would couple
 //     the partials and break the parallel-coexistence period.
 //
@@ -142,8 +142,9 @@ public sealed partial class SectorWar : IInventory
     // CONSTANTS — all subsystem-prefixed with "Inventory".
     // -------------------------------------------------------------------------
 
-    /// <summary>?shop — text-listing fallback when the player isn't in spec
-    /// (the spec-only dialog UI requires the SelectBox channel).</summary>
+    /// <summary>?shop — opens a dialog UI in spec, prints a text listing in
+    /// flight. The buy action itself still requires spectator mode regardless
+    /// of which mode opened the menu.</summary>
     private const string InventoryShopCommand = "shop";
 
     /// <summary>?shopbuy &lt;id&gt; — buy by item id without opening the dialog.</summary>
@@ -524,7 +525,8 @@ public sealed partial class SectorWar : IInventory
 
         if (_inventorySelectBox is null)
             _logManager.LogM(LogLevel.Warn, LogCategory,
-                "Inventory: ISelectBox not available — ?menu and dialog-mode shop will not function.");
+                "Inventory: ISelectBox not available — ?hq and dialog-mode shop will not function. " +
+                "This should be unreachable since the umbrella registers ISelectBox itself; check load order if seen.");
 
         if (_inventoryEconomy is null)
         {

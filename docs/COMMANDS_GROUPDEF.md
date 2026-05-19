@@ -109,8 +109,8 @@ cmd_inv
 privcmd_inv
 cmd_inventory
 privcmd_inventory
-cmd_menu
-privcmd_menu
+cmd_hq
+privcmd_hq
 ```
 
 ## Market
@@ -306,6 +306,8 @@ cmd_floor
 privcmd_floor
 cmd_give
 privcmd_give
+cmd_hq
+privcmd_hq
 cmd_inv
 privcmd_inv
 cmd_inventory
@@ -326,8 +328,6 @@ cmd_lvztest
 privcmd_lvztest
 cmd_market
 privcmd_market
-cmd_menu
-privcmd_menu
 cmd_modulebuild
 privcmd_modulebuild
 cmd_moduleclear

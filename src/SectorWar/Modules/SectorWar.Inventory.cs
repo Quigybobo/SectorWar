@@ -1765,32 +1765,30 @@ public sealed partial class SectorWar : IInventory
 
     // -------------------------------------------------------------------------
     // CHAT COMMANDS — 8 commands, all routed through the per-MenuState
-    // dialog flow when the player is in spec, or to text-mode fallback when
-    // the player is flying.
+    // dialog flow. ?hq opens the dialog UI in any ship state; the umbrella
+    // registers ISelectBox itself so the dialog is always available. The
+    // text-mode listing is kept as a fallback for the (rare) case where
+    // SelectBox is unavailable.
     // -------------------------------------------------------------------------
 
     /// <summary>?hq — opens the unified SectorWar top-menu dialog. Arrow
     /// keys to navigate, Enter to select, Esc to close. Was ?menu before
     /// 2026-05-17 — renamed to avoid Nexus collision.</summary>
     [CommandHelp(Targets = CommandTarget.None, Args = null,
-        Description = "Open the SectorWar HQ menu (shop, inventory, deploy). In spec: dialog UI with arrows + Enter. In flight: text-mode quick reference.")]
+        Description = "Open the SectorWar HQ menu (shop, inventory, deploy). Dialog UI with arrows + Enter; works in spec or in flight.")]
     private void Command_InventoryMenu(ReadOnlySpan<char> commandName,
         ReadOnlySpan<char> parameters, Player player, ITarget target)
     {
-        // In spec WITH SelectBox loaded: open the full SelectBox dialog UI
-        // (arrow-key navigation).
-        // Otherwise (flight, OR spec without SelectBox): print a text-mode
-        // menu so players can see what's available + which commands to use.
-        // The underlying commands (?buy pylon, etc.) work in-flight just fine.
-        if (player.Ship == ShipType.Spec && _inventorySelectBox is not null)
+        if (_inventorySelectBox is not null)
         {
             OpenInventoryTopMenu(player);
             return;
         }
 
-        // Flight mode: text-mode quick reference. Each item lists the direct
-        // command so players can fire it off without going to spec.
-        _chat.SendMessage(player, "--- SectorWar quick menu (flight) ---");
+        // SelectBox unavailable (umbrella didn't register it for some reason):
+        // fall back to a text-mode quick reference so the command still does
+        // something useful.
+        _chat.SendMessage(player, "--- SectorWar quick menu ---");
         _chat.SendMessage(player, "DEPLOYABLES (cost in credits):");
         _chat.SendMessage(player, "  ?buy pylon         - power source + claim point");
         _chat.SendMessage(player, "  ?buy outpost       - 5-turret defense ring");
@@ -1807,8 +1805,6 @@ public sealed partial class SectorWar : IInventory
         _chat.SendMessage(player, "GAME:");
         _chat.SendMessage(player, "  ?start war         - spawn both team HQs (begin round)");
         _chat.SendMessage(player, "  ?claim             - this arena's pylon-claim state");
-        _chat.SendMessage(player, "");
-        _chat.SendMessage(player, "Spec (Esc) and re-type ?hq for the full dialog UI.");
     }
 
     /// <summary>?shop — in spec, opens the dialog UI; otherwise prints a
